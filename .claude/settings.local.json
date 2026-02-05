@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm create vite@latest:*)"
+      "Bash(npm create vite@latest:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git add:*)"
     ]
   }
 }
