@@ -257,6 +257,12 @@
 
         .toolbar-spacer { flex: 1; }
 
+        #tab-input, #tab-calc {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
         @media (max-width: 768px) {
             .container { padding: 0 12px; margin: 16px auto; }
             .card { padding: 16px; }
@@ -274,45 +280,47 @@
 </div>
 
 <nav class="nav">
-    <a href="index.html">Канализация (СП 30.13330)</a>
-    <a href="complex.html" class="active">Жилой комплекс</a>
+    <a href="#" class="active" onclick="switchTab('input', this); return false;">Исходные данные</a>
+    <a href="#" onclick="switchTab('calc', this); return false;">Расчёт</a>
 </nav>
 
 <div class="container">
-    <!-- Управление корпусами -->
-    <div class="toolbar">
-        <button class="btn" onclick="addBuilding()">+ Корпус</button>
-        <button class="btn-outline btn" onclick="removeBuilding()">− Корпус</button>
-        <div class="toolbar-spacer"></div>
-        <button class="btn-outline btn" onclick="resetAll()">Сбросить</button>
-    </div>
+    <!-- === Вкладка: Исходные данные === -->
+    <div id="tab-input">
+        <div class="toolbar">
+            <button class="btn" onclick="addBuilding()">+ Корпус</button>
+            <button class="btn-outline btn" onclick="removeBuilding()">− Корпус</button>
+            <div class="toolbar-spacer"></div>
+            <button class="btn-outline btn" onclick="resetAll()">Сбросить</button>
+        </div>
 
-    <!-- Исходные данные -->
-    <div class="card">
-        <div class="card-title">Исходные данные по корпусам</div>
-        <div class="table-scroll">
-            <table class="data-table" id="input-table">
-                <thead id="input-head"></thead>
-                <tbody id="input-body"></tbody>
-            </table>
+        <div class="card">
+            <div class="card-title">Исходные данные по корпусам</div>
+            <div class="table-scroll">
+                <table class="data-table" id="input-table">
+                    <thead id="input-head"></thead>
+                    <tbody id="input-body"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-    <!-- Расчётные величины -->
-    <div class="card">
-        <div class="card-title">Расчётные величины</div>
-        <div class="table-scroll">
-            <table class="data-table">
-                <thead id="calc-head"></thead>
-                <tbody id="calc-body"></tbody>
-            </table>
+    <!-- === Вкладка: Расчёт === -->
+    <div id="tab-calc" style="display:none">
+        <div class="card">
+            <div class="card-title">Расчётные величины</div>
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead id="calc-head"></thead>
+                    <tbody id="calc-body"></tbody>
+                </table>
+            </div>
         </div>
-    </div>
 
-    <!-- Сводка -->
-    <div class="card">
-        <div class="card-title">Сводка по комплексу</div>
-        <div class="results-grid" id="summary"></div>
+        <div class="card">
+            <div class="card-title">Сводка по комплексу</div>
+            <div class="results-grid" id="summary"></div>
+        </div>
     </div>
 </div>
 
@@ -532,6 +540,15 @@ function resetAll() {
         }
     }
     render();
+}
+
+// === Вкладки ===
+function switchTab(tabId, linkEl) {
+    document.getElementById('tab-input').style.display = tabId === 'input' ? '' : 'none';
+    document.getElementById('tab-calc').style.display = tabId === 'calc' ? '' : 'none';
+    document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
+    linkEl.classList.add('active');
+    recalculate();
 }
 
 // === Инициализация ===
