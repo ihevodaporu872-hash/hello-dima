@@ -454,6 +454,42 @@ const MAT_PVC = [
     { type:'мат', name:'Муфта противопожарная "ОГНЕЗА-ПМ/110"',        unit:'шт', calc: b => val('k1',b) * val('floors',b) },
 ];
 
+// === Сохранение в localStorage ===
+const STORAGE_KEY = 'complex_data';
+
+function saveData() {
+    const data = {};
+    PARAMS.forEach(p => {
+        data[p.id] = {};
+        buildings.forEach(b => {
+            data[p.id][b.id] = val(p.id, b.id) || '';
+        });
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ buildings, values: data }));
+}
+
+function loadData() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (saved.buildings && saved.buildings.length > 0) {
+            buildings = saved.buildings;
+            nextBuildingId = Math.max(...buildings.map(b => b.id)) + 1;
+        }
+        if (saved.values) {
+            // Перезаписываем DEFAULTS сохранёнными значениями
+            for (const paramId in saved.values) {
+                if (DEFAULTS[paramId]) {
+                    for (const bid in saved.values[paramId]) {
+                        DEFAULTS[paramId][bid] = saved.values[paramId][bid];
+                    }
+                }
+            }
+        }
+    } catch(e) { /* игнорируем ошибки парсинга */ }
+}
+
 // === Утилиты ===
 function val(paramId, buildingId) {
     const el = document.getElementById(`inp_${paramId}_${buildingId}`);
@@ -505,6 +541,9 @@ function recalculate() {
         buildings.forEach(b => { sum += val(p.id, b.id); });
         document.getElementById(`total_${p.id}`).textContent = fmt(sum);
     });
+
+    // Сохраняем данные
+    saveData();
 
     // Расчёт К1
     renderCalcK1();
@@ -575,6 +614,7 @@ function resetAll() {
             DEFAULTS[key][bid] = '';
         }
     }
+    localStorage.removeItem(STORAGE_KEY);
     render();
 }
 
@@ -588,6 +628,7 @@ function switchTab(tabId, linkEl) {
 }
 
 // === Инициализация ===
+loadData();
 render();
 </script>
 
