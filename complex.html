@@ -266,6 +266,63 @@
             gap: 24px;
         }
 
+        .form-group-inline {
+            margin-bottom: 16px;
+            max-width: 300px;
+        }
+
+        .form-group-inline label {
+            display: block;
+            font-size: 0.78rem;
+            color: #9ca3af;
+            margin-bottom: 4px;
+        }
+
+        .form-group-inline select {
+            width: 100%;
+            padding: 8px 10px;
+            background: #0f1117;
+            border: 1px solid #2a2d3a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 0.85rem;
+            font-family: inherit;
+        }
+
+        .form-group-inline select:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .form-group-inline select option {
+            background: #161922;
+        }
+
+        .data-table .row-rab td {
+            background: rgba(245, 158, 11, 0.08);
+            font-weight: 600;
+            font-style: italic;
+            color: #f59e0b;
+            border-top: 2px solid #2a2d3a;
+        }
+
+        .data-table .row-mat td:nth-child(2) {
+            color: #6b7280;
+            font-size: 0.7rem;
+        }
+
+        .data-table td.type-cell {
+            font-size: 0.68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            width: 30px !important;
+            min-width: 30px !important;
+            max-width: 30px !important;
+        }
+
+        .row-rab .type-cell { color: #f59e0b; }
+        .row-mat .type-cell { color: #6b7280; }
+
         @media (max-width: 768px) {
             .container { padding: 0 12px; margin: 16px auto; }
             .card { padding: 16px; }
@@ -312,7 +369,19 @@
     <div id="tab-calc" style="display:none">
         <div class="card">
             <div class="card-title">Расчёт системы хоз-быт К1</div>
-            <div id="calc-k1-content"></div>
+            <div class="form-group-inline">
+                <label>Материал стояков</label>
+                <select id="material-k1" onchange="recalculate()">
+                    <option value="cast_iron">Чугун (SML)</option>
+                    <option value="pvc">ПВХ</option>
+                </select>
+            </div>
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead id="calc-k1-head"></thead>
+                    <tbody id="calc-k1-body"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -354,7 +423,37 @@ const DEFAULTS = {
     apartments:{ 1: '', 2: '', 3: '',  4: '' },
 };
 
-// Расчётные строки (пусто — будет заполняться)
+// === Материалы К1 ===
+// b = buildingId, v() = val shortcut
+const MAT_CAST_IRON = [
+    { type:'раб', name:'Монтаж трубы чугунной',                         unit:'м',  calc: b => val('k1',b) * val('height',b) },
+    { type:'мат', name:'Труба чугунная SML L=3000 мм',   brand:'Smart', unit:'м',  calc: b => val('k1',b) * val('height',b) },
+    { type:'мат', name:'Крестовина одноплоскостная чугун SML 88°', brand:'Smart', unit:'шт', calc: b => val('k1',b) * val('floors',b) },
+    { type:'мат', name:'Тройник чугун SML',              brand:'Smart', unit:'шт', calc: b => val('k1',b) * val('floors',b) },
+    { type:'мат', name:'Заглушка Konfix',                brand:'Smart', unit:'шт', calc: b => val('k1',b) * val('floors',b) * 2 },
+    { type:'мат', name:'Ревизия чугун SML',              brand:'Smart', unit:'шт', calc: b => val('k1',b) * Math.ceil(val('floors',b) / 3) },
+    { type:'мат', name:'Труба опорная',                  brand:'Smart', unit:'шт', calc: b => val('k1',b) * Math.ceil(val('floors',b) / 3) },
+    { type:'мат', name:'Кольцо опорное',                 brand:'Smart', unit:'шт', calc: b => val('k1',b) * Math.ceil(val('floors',b) / 3) },
+    { type:'мат', name:'Консоль опорная для чугунных труб', brand:'Smart', unit:'шт', calc: b => val('k1',b) * Math.ceil(val('floors',b) / 3) },
+    { type:'мат', name:'Хомут Rapid',                    brand:'Smart', unit:'шт', calc: b => val('k1',b) * val('height',b) },
+    { type:'мат', name:'Хомут для труб',                               unit:'шт', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
+    { type:'мат', name:'Цанга М12',                                    unit:'шт', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
+    { type:'раб', name:'Монтаж теплоизоляции (гильзы)',                 unit:'шт', calc: b => val('k1',b) * val('floors',b) },
+    { type:'мат', name:'Цилиндр теплоизол. Ду125 (L=0,3 м) на гильзы', unit:'м', calc: b => +(val('k1',b) * val('floors',b) * 0.3).toFixed(1) },
+];
+
+const MAT_PVC = [
+    { type:'раб', name:'Монтаж труб ПВХ',                              unit:'м',  calc: b => val('k1',b) * val('height',b) },
+    { type:'мат', name:'Труба ПВХ L=3000 мм',                          unit:'м',  calc: b => val('k1',b) * val('height',b) },
+    { type:'мат', name:'Крестовина одноплоскостная ПВХ 88°',            unit:'шт', calc: b => val('k1',b) * val('floors',b) },
+    { type:'мат', name:'Тройник ПВХ 88°',                              unit:'шт', calc: b => val('k1',b) * val('floors',b) },
+    { type:'мат', name:'Заглушка ПВХ',                                 unit:'шт', calc: b => val('k1',b) * val('floors',b) * 2 },
+    { type:'мат', name:'Ревизия круглая ПВХ',                          unit:'шт', calc: b => val('k1',b) * Math.ceil(val('floors',b) / 5) },
+    { type:'мат', name:'Хомут для труб',                               unit:'шт', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
+    { type:'мат', name:'Цанга М12',                                    unit:'шт', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
+    { type:'раб', name:'Монтаж муфты противопожарной (Огнеза)',         unit:'шт', calc: b => val('k1',b) * val('floors',b) },
+    { type:'мат', name:'Муфта противопожарная "ОГНЕЗА-ПМ/110"',        unit:'шт', calc: b => val('k1',b) * val('floors',b) },
+];
 
 // === Утилиты ===
 function val(paramId, buildingId) {
@@ -413,42 +512,42 @@ function recalculate() {
 }
 
 function renderCalcK1() {
-    const el = document.getElementById('calc-k1-content');
-    const totalK1 = buildings.reduce((s, b) => s + val('k1', b.id), 0);
-    const totalLen = buildings.reduce((s, b) => s + val('k1', b.id) * val('height', b.id), 0);
+    const materialSel = document.getElementById('material-k1');
+    const material = materialSel ? materialSel.value : 'cast_iron';
+    const rows = material === 'cast_iron' ? MAT_CAST_IRON : MAT_PVC;
 
-    el.innerHTML = `
-        <div class="table-scroll">
-            <table class="data-table">
-                <thead><tr>
-                    <th style="text-align:left">Параметр</th>
-                    <th>Ед. изм.</th>
-                    ${buildings.map(b => `<th>Корпус ${b.name}</th>`).join('')}
-                    <th>Итого</th>
-                </tr></thead>
-                <tbody>
-                    <tr>
-                        <td>Стояков К1</td>
-                        <td class="unit-cell">шт</td>
-                        ${buildings.map(b => `<td>${fmt(val('k1', b.id))}</td>`).join('')}
-                        <td class="total-cell">${fmt(totalK1)}</td>
-                    </tr>
-                    <tr>
-                        <td>Высота здания</td>
-                        <td class="unit-cell">м</td>
-                        ${buildings.map(b => `<td>${fmt(val('height', b.id))}</td>`).join('')}
-                        <td class="total-cell">—</td>
-                    </tr>
-                    <tr>
-                        <td>Длина стояков К1</td>
-                        <td class="unit-cell">м</td>
-                        ${buildings.map(b => `<td>${fmt(val('k1', b.id) * val('height', b.id))}</td>`).join('')}
-                        <td class="total-cell">${fmt(totalLen)}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    `;
+    const head = document.getElementById('calc-k1-head');
+    const body = document.getElementById('calc-k1-body');
+
+    head.innerHTML = `<tr>
+        <th style="width:30px;min-width:30px"></th>
+        <th style="text-align:left">Наименование</th>
+        <th>Ед. изм.</th>
+        ${buildings.map(b => `<th>Корпус ${b.name}</th>`).join('')}
+        <th>Итого</th>
+    </tr>`;
+
+    body.innerHTML = rows.map(row => {
+        const isRab = row.type === 'раб';
+        let total = 0;
+        const cells = buildings.map(b => {
+            const v = row.calc(b.id);
+            total += v;
+            return `<td>${fmt(v)}</td>`;
+        }).join('');
+
+        const nameText = row.brand
+            ? `${row.name} <span style="color:#6b7280;font-size:0.68rem">${row.brand}</span>`
+            : row.name;
+
+        return `<tr class="${isRab ? 'row-rab' : 'row-mat'}">
+            <td class="type-cell">${row.type}</td>
+            <td style="text-align:left;white-space:normal;max-width:200px">${nameText}</td>
+            <td class="unit-cell">${row.unit}</td>
+            ${isRab ? buildings.map(() => '<td></td>').join('') : cells}
+            <td class="total-cell">${fmt(total)}</td>
+        </tr>`;
+    }).join('');
 }
 
 // === Управление корпусами ===
