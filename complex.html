@@ -368,12 +368,23 @@
     <div id="tab-calc" style="display:none">
         <div class="card">
             <div class="card-title">Расчёт системы хоз-быт К1</div>
-            <div class="form-group-inline">
-                <label>Материал стояков</label>
-                <select id="material-k1" onchange="recalculate()">
-                    <option value="cast_iron">Чугун (SML)</option>
-                    <option value="pvc">ПВХ</option>
-                </select>
+            <div style="display:flex;gap:16px;flex-wrap:wrap">
+                <div class="form-group-inline">
+                    <label>Материал стояков</label>
+                    <select id="material-k1" onchange="onMaterialChange()">
+                        <option value="cast_iron">Чугун (SML)</option>
+                        <option value="pvc">ПВХ</option>
+                    </select>
+                </div>
+                <div class="form-group-inline" id="brand-group">
+                    <label>Бренд</label>
+                    <select id="brand-k1" onchange="recalculate()">
+                        <option value="AVF">AVF</option>
+                        <option value="Smart" selected>Smart</option>
+                        <option value="Con-Pipe">Con-Pipe</option>
+                        <option value="Pam-Global">Pam-Global</option>
+                    </select>
+                </div>
             </div>
             <div class="table-scroll">
                 <table class="data-table">
@@ -549,10 +560,17 @@ function recalculate() {
     renderCalcK1();
 }
 
+function onMaterialChange() {
+    const material = document.getElementById('material-k1').value;
+    document.getElementById('brand-group').style.display = material === 'cast_iron' ? '' : 'none';
+    recalculate();
+}
+
 function renderCalcK1() {
     const materialSel = document.getElementById('material-k1');
     const material = materialSel ? materialSel.value : 'cast_iron';
     const rows = material === 'cast_iron' ? MAT_CAST_IRON : MAT_PVC;
+    const selectedBrand = document.getElementById('brand-k1').value;
 
     const head = document.getElementById('calc-k1-head');
     const body = document.getElementById('calc-k1-body');
@@ -574,8 +592,9 @@ function renderCalcK1() {
             return `<td>${fmt(v)}</td>`;
         }).join('');
 
-        const nameText = row.brand
-            ? `${row.name} <span style="color:#6b7280;font-size:0.68rem">${row.brand}</span>`
+        const brandLabel = (row.brand && material === 'cast_iron') ? selectedBrand : '';
+        const nameText = brandLabel
+            ? `${row.name} <span style="color:#6b7280;font-size:0.68rem">${brandLabel}</span>`
             : row.name;
 
         return `<tr class="${isRab ? 'row-rab' : 'row-mat'}">
