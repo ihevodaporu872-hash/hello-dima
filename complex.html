@@ -311,18 +311,8 @@
     <!-- === Вкладка: Расчёт === -->
     <div id="tab-calc" style="display:none">
         <div class="card">
-            <div class="card-title">Расчётные величины</div>
-            <div class="table-scroll">
-                <table class="data-table">
-                    <thead id="calc-head"></thead>
-                    <tbody id="calc-body"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Сводка по комплексу</div>
-            <div class="results-grid" id="summary"></div>
+            <div class="card-title">Расчёт система хоз-быт К1</div>
+            <div id="calc-k1-content"></div>
         </div>
     </div>
 </div>
@@ -364,15 +354,7 @@ const DEFAULTS = {
     apartments:{ 1: '', 2: '', 3: '',  4: '' },
 };
 
-// Расчётные строки
-const CALCS = [
-    { id: 'len_k1',      label: 'Длина стояков К1',               unit: 'м',  calc: (b) => val('k1', b) * val('height', b) },
-    { id: 'len_k2',      label: 'Длина стояков К2',               unit: 'м',  calc: (b) => val('k2', b) * val('height', b) },
-    { id: 'len_k4',      label: 'Длина стояков К4',               unit: 'м',  calc: (b) => val('k4', b) * val('height', b) },
-    { id: 'total_traps', label: 'Лотков/трапов всего в здании',   unit: 'шт', calc: (b) => val('traps', b) * val('floors', b) },
-    { id: 'total_san',   label: 'С/у МОП всего (по зданию)',      unit: 'шт', calc: (b) => val('sanitary', b) },
-    { id: 'total_fun',   label: 'Воронок кровельных всего',       unit: 'шт', calc: (b) => val('funnels', b) },
-];
+// Расчётные строки (пусто — будет заполняться)
 
 // === Утилиты ===
 function val(paramId, buildingId) {
@@ -416,13 +398,6 @@ function renderInputTable() {
         <td class="total-cell" id="total_${p.id}">—</td>
     </tr>`).join('');
 
-    // Заголовок расчётной таблицы
-    document.getElementById('calc-head').innerHTML = `<tr>
-        <th style="text-align:left">Параметр</th>
-        <th>Ед. изм.</th>
-        ${buildings.map(b => `<th>Корпус ${b.name}</th>`).join('')}
-        <th>Итого</th>
-    </tr>`;
 }
 
 function recalculate() {
@@ -433,85 +408,45 @@ function recalculate() {
         document.getElementById(`total_${p.id}`).textContent = fmt(sum);
     });
 
-    // Расчётные величины
-    const calcBody = document.getElementById('calc-body');
-    calcBody.innerHTML = CALCS.map(c => {
-        let sum = 0;
-        const cells = buildings.map(b => {
-            const v = c.calc(b.id);
-            sum += v;
-            return `<td>${fmt(v)}</td>`;
-        }).join('');
-        return `<tr>
-            <td>${c.label}</td>
-            <td class="unit-cell">${c.unit}</td>
-            ${cells}
-            <td class="total-cell">${fmt(sum)}</td>
-        </tr>`;
-    }).join('');
-
-    // Сводка
-    renderSummary();
+    // Расчёт К1
+    renderCalcK1();
 }
 
-function renderSummary() {
-    const grid = document.getElementById('summary');
+function renderCalcK1() {
+    const el = document.getElementById('calc-k1-content');
+    const totalK1 = buildings.reduce((s, b) => s + val('k1', b.id), 0);
+    const totalLen = buildings.reduce((s, b) => s + val('k1', b.id) * val('height', b.id), 0);
 
-    const totalApt = buildings.reduce((s, b) => s + val('apartments', b.id), 0);
-    const totalK1  = buildings.reduce((s, b) => s + val('k1', b.id) * val('height', b.id), 0);
-    const totalK2  = buildings.reduce((s, b) => s + val('k2', b.id) * val('height', b.id), 0);
-    const totalK4  = buildings.reduce((s, b) => s + val('k4', b.id) * val('height', b.id), 0);
-    const totalPipe = totalK1 + totalK2 + totalK4;
-    const totalTraps = buildings.reduce((s, b) => s + val('traps', b.id) * val('floors', b.id), 0);
-    const totalFun  = buildings.reduce((s, b) => s + val('funnels', b.id), 0);
-    const totalSan  = buildings.reduce((s, b) => s + val('sanitary', b.id), 0);
-    const totalFloors = buildings.reduce((s, b) => s + val('floors', b.id), 0);
-    const totalRisers = buildings.reduce((s, b) => s + val('k1', b.id) + val('k2', b.id) + val('k4', b.id), 0);
-
-    grid.innerHTML = `
-        <div class="result-item">
-            <div class="value">${buildings.length}</div>
-            <div class="label">Корпусов</div>
-        </div>
-        <div class="result-item">
-            <div class="value">${fmt(totalApt)}</div>
-            <div class="label">Квартир (КВ)</div>
-        </div>
-        <div class="result-item">
-            <div class="value">${totalFloors}</div>
-            <div class="label">Этажей суммарно</div>
-        </div>
-        <div class="result-item">
-            <div class="value">${totalRisers}</div>
-            <div class="label">Стояков всего (К1+К2+К4)</div>
-        </div>
-        <div class="result-item">
-            <div class="value">${fmt(totalPipe)} <span class="unit">м</span></div>
-            <div class="label">Стояков суммарная длина</div>
-        </div>
-        <div class="result-item">
-            <div class="value">${fmt(totalK1)} <span class="unit">м</span></div>
-            <div class="label">Стояки К1 — длина</div>
-        </div>
-        <div class="result-item">
-            <div class="value">${fmt(totalK2)} <span class="unit">м</span></div>
-            <div class="label">Стояки К2 — длина</div>
-        </div>
-        <div class="result-item">
-            <div class="value">${fmt(totalK4)} <span class="unit">м</span></div>
-            <div class="label">Стояки К4 — длина</div>
-        </div>
-        <div class="result-item">
-            <div class="value">${fmt(totalTraps)}</div>
-            <div class="label">Лотков/трапов всего</div>
-        </div>
-        <div class="result-item">
-            <div class="value">${totalFun}</div>
-            <div class="label">Воронок кровельных</div>
-        </div>
-        <div class="result-item">
-            <div class="value">${totalSan}</div>
-            <div class="label">С/у МОП и офис</div>
+    el.innerHTML = `
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead><tr>
+                    <th style="text-align:left">Параметр</th>
+                    <th>Ед. изм.</th>
+                    ${buildings.map(b => `<th>Корпус ${b.name}</th>`).join('')}
+                    <th>Итого</th>
+                </tr></thead>
+                <tbody>
+                    <tr>
+                        <td>Стояков К1</td>
+                        <td class="unit-cell">шт</td>
+                        ${buildings.map(b => `<td>${fmt(val('k1', b.id))}</td>`).join('')}
+                        <td class="total-cell">${fmt(totalK1)}</td>
+                    </tr>
+                    <tr>
+                        <td>Высота здания</td>
+                        <td class="unit-cell">м</td>
+                        ${buildings.map(b => `<td>${fmt(val('height', b.id))}</td>`).join('')}
+                        <td class="total-cell">—</td>
+                    </tr>
+                    <tr>
+                        <td>Длина стояков К1</td>
+                        <td class="unit-cell">м</td>
+                        ${buildings.map(b => `<td>${fmt(val('k1', b.id) * val('height', b.id))}</td>`).join('')}
+                        <td class="total-cell">${fmt(totalLen)}</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     `;
 }
