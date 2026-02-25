@@ -126,11 +126,13 @@
             top: 0;
         }
 
-        .data-table td:first-child {
+        .data-table td:first-child,
+        .data-table th:first-child {
             text-align: left;
             white-space: normal;
-            min-width: 100px;
-            max-width: 160px;
+            width: 120px;
+            min-width: 90px;
+            max-width: 120px;
             color: #d1d5db;
             font-size: 0.76rem;
         }
@@ -336,16 +338,16 @@ let buildings = [
 
 // Параметры ввода
 const PARAMS = [
-    { id: 'k1',        label: 'Стояки К1',            unit: 'шт', step: 1 },
-    { id: 'k2',        label: 'Стояки К2',            unit: 'шт', step: 1 },
-    { id: 'k4',        label: 'Стояки К4',            unit: 'шт', step: 1 },
-    { id: 'traps',     label: 'Лотки/трапы на этаже', unit: 'шт', step: 1 },
-    { id: 'height',    label: 'Высота здания',        unit: 'м',  step: 0.1 },
-    { id: 'floors',    label: 'Кол-во этажей',        unit: 'шт', step: 1 },
-    { id: 'floor_h',   label: 'Высота этажа',         unit: 'м',  step: 0.1 },
-    { id: 'sanitary',  label: 'С/у МОП, офис 1 эт',  unit: 'шт', step: 1 },
-    { id: 'funnels',   label: 'Воронки кровельные',   unit: 'шт', step: 1 },
-    { id: 'apartments',label: 'КВ (квартиры)',         unit: 'шт', step: 1 },
+    { id: 'k1',        label: 'Кол-во стояков К1',                                    unit: 'шт', step: 1 },
+    { id: 'k2',        label: 'Кол-во стояков К2',                                    unit: 'шт', step: 1 },
+    { id: 'k4',        label: 'Кол-во стояков К4',                                    unit: 'шт', step: 1 },
+    { id: 'traps',     label: 'Кол-во лотков/трапов на этаже',                        unit: 'шт', step: 1 },
+    { id: 'height',    label: 'Высота здания',                                        unit: 'м',  step: 0.1 },
+    { id: 'floors',    label: 'Кол-во этажей',                                        unit: 'шт', step: 1 },
+    { id: 'floor_h',   label: 'Высота этажа',                                         unit: 'м',  step: 0.1 },
+    { id: 'sanitary',  label: 'Кол-во с/у МОП, ПУИ, лапомойки, с/у офис 1 эт',       unit: 'шт', step: 1 },
+    { id: 'funnels',   label: 'Кол-во воронок кровельных',                             unit: 'шт', step: 1 },
+    { id: 'apartments',label: 'Кол-во КВ (квартир)',                                   unit: 'шт', step: 1 },
 ];
 
 // Значения по умолчанию из таблицы пользователя { paramId: { buildingId: value } }
