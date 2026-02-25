@@ -376,14 +376,27 @@
                         <option value="pvc">ПВХ</option>
                     </select>
                 </div>
-                <div class="form-group-inline" id="brand-group">
+                <div class="form-group-inline" id="brand-group-iron">
                     <label>Бренд</label>
-                    <select id="brand-k1" onchange="recalculate()">
+                    <select id="brand-iron" onchange="recalculate()">
                         <option value="AVF">AVF</option>
                         <option value="Smart" selected>Smart</option>
                         <option value="Con-Pipe">Con-Pipe</option>
                         <option value="Pam-Global">Pam-Global</option>
                         <option value="Halifax">Halifax</option>
+                    </select>
+                </div>
+                <div class="form-group-inline" id="brand-group-pvc" style="display:none">
+                    <label>Бренд</label>
+                    <select id="brand-pvc" onchange="recalculate()">
+                        <option value="Контур-Уют">Контур-Уют</option>
+                        <option value="РосТурПласт">РосТурПласт</option>
+                        <option value="Ostendorf" selected>Ostendorf</option>
+                        <option value="Pro Aqua">Pro Aqua</option>
+                        <option value="Rehau">Rehau</option>
+                        <option value="Синикон">Синикон</option>
+                        <option value="Uponor">Uponor</option>
+                        <option value="Valfex">Valfex</option>
                     </select>
                 </div>
             </div>
@@ -455,11 +468,11 @@ const MAT_CAST_IRON = [
 
 const MAT_PVC = [
     { type:'раб', name:'Монтаж труб ПВХ',                              unit:'м',  calc: b => val('k1',b) * val('height',b) },
-    { type:'мат', name:'Труба ПВХ L=3000 мм',                          unit:'м',  calc: b => val('k1',b) * val('height',b) },
-    { type:'мат', name:'Крестовина одноплоскостная ПВХ 88°',            unit:'шт', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Тройник ПВХ 88°',                              unit:'шт', calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Заглушка ПВХ',                                 unit:'шт', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Ревизия круглая ПВХ',                          unit:'шт', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
+    { type:'мат', name:'Труба ПВХ L=3000 мм',             brand:true,  unit:'м',  calc: b => val('k1',b) * val('height',b) },
+    { type:'мат', name:'Крестовина одноплоскостная ПВХ 88°', brand:true, unit:'шт', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Тройник ПВХ 88°',                 brand:true,  unit:'шт', calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Заглушка ПВХ',                    brand:true,  unit:'шт', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Ревизия круглая ПВХ',             brand:true,  unit:'шт', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
     { type:'мат', name:'Хомут для труб',                               unit:'шт', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
     { type:'мат', name:'Цанга М12',                                    unit:'шт', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
     { type:'раб', name:'Монтаж муфты противопожарной (Огнеза)',         unit:'шт', calc: b => val('k1',b) * val('floors',b) },
@@ -563,7 +576,8 @@ function recalculate() {
 
 function onMaterialChange() {
     const material = document.getElementById('material-k1').value;
-    document.getElementById('brand-group').style.display = material === 'cast_iron' ? '' : 'none';
+    document.getElementById('brand-group-iron').style.display = material === 'cast_iron' ? '' : 'none';
+    document.getElementById('brand-group-pvc').style.display = material === 'pvc' ? '' : 'none';
     recalculate();
 }
 
@@ -571,7 +585,9 @@ function renderCalcK1() {
     const materialSel = document.getElementById('material-k1');
     const material = materialSel ? materialSel.value : 'cast_iron';
     const rows = material === 'cast_iron' ? MAT_CAST_IRON : MAT_PVC;
-    const selectedBrand = document.getElementById('brand-k1').value;
+    const selectedBrand = material === 'cast_iron'
+        ? document.getElementById('brand-iron').value
+        : document.getElementById('brand-pvc').value;
 
     const head = document.getElementById('calc-k1-head');
     const body = document.getElementById('calc-k1-body');
@@ -593,7 +609,7 @@ function renderCalcK1() {
             return `<td>${fmt(v)}</td>`;
         }).join('');
 
-        const brandLabel = (row.brand && material === 'cast_iron') ? selectedBrand : '';
+        const brandLabel = row.brand ? selectedBrand : '';
         const nameText = brandLabel
             ? `${row.name} <span style="color:#6b7280;font-size:0.68rem">${brandLabel}</span>`
             : row.name;
