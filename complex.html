@@ -522,12 +522,14 @@ function removeBuilding() {
 function resetAll() {
     buildings = [
         { id: 1, name: '№1' },
-        { id: 2, name: '№2' },
-        { id: 3, name: '№3' },
-        { id: 4, name: '№4' },
     ];
-    nextBuildingId = 5;
-    // Сброс DEFAULTS не нужен — они неизменяемы
+    nextBuildingId = 2;
+    // Очищаем defaults чтобы поля были пустыми
+    for (const key in DEFAULTS) {
+        for (const bid in DEFAULTS[key]) {
+            DEFAULTS[key][bid] = '';
+        }
+    }
     render();
 }
 
