@@ -660,12 +660,21 @@ function switchTab(tabId, linkEl) {
     document.getElementById('tab-calc').style.display = tabId === 'calc' ? '' : 'none';
     document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
     linkEl.classList.add('active');
+    localStorage.setItem('complex_active_tab', tabId);
     recalculate();
 }
 
 // === Инициализация ===
 loadData();
 render();
+
+// Восстановление активной вкладки
+const savedTab = localStorage.getItem('complex_active_tab');
+if (savedTab && savedTab !== 'input') {
+    const links = document.querySelectorAll('.nav a');
+    const idx = savedTab === 'calc' ? 1 : 0;
+    switchTab(savedTab, links[idx]);
+}
 </script>
 
 </body>
