@@ -154,17 +154,7 @@
             width: 52px;
         }
         .dn-select:focus { border-color: #3b82f6; outline: none; }
-        .dn-pair {
-            display: inline-flex;
-            align-items: center;
-            gap: 2px;
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 4px;
-            padding: 1px 2px;
-        }
-        .dn-pair span { color: #6b7280; font-size: 0.65rem; }
-        .dn-pair .dn-select { border: none; width: 46px; padding: 1px 0; }
+        .dn-select-pair { width: 76px; }
 
         .data-table .total-cell {
             font-weight: 700;
@@ -515,14 +505,25 @@ function getPrice(priceId, brand) {
 // b = buildingId, dns = доступные диаметры, priceKey(dn) = id строки в Supabase
 // pricePer = делитель цены (3 = цена за 3м трубу → за 1м)
 const DN_SML = [50, 70, 80, 100, 125, 150, 200, 250, 300];
+const DN_PAIRS = [
+    '50_50',
+    '70_50','70_70',
+    '80_50','80_80',
+    '100_50','100_70','100_80','100_100',
+    '125_50','125_70','125_80','125_100','125_125',
+    '150_70','150_80','150_100','150_125','150_150',
+    '200_100','200_150','200_200',
+    '250_150','250_200','250_250',
+    '300_200','300_250','300_300',
+];
 
 const selectedDns = {}; // { 'cast_iron_0': 100, ... } — запоминает выбранный ДН
 
 const MAT_CAST_IRON = [
     { type:'раб', name:'Монтаж трубы чугунной',                         unit:'м',  priceId:'montazh_truby_chug', calc: b => val('k1',b) * val('height',b) },
     { type:'мат', name:'Труба чугунная SML L=3000 мм',   brand:'Smart', unit:'м',  dns:DN_SML, defaultDn:100, pricePer:3, priceKey: dn=>`truba_${dn}`, calc: b => val('k1',b) * val('height',b) },
-    { type:'мат', name:'Крестовина одноплоскостная чугун SML 88°', brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, dns2:DN_SML, defaultDn2:100, priceKey: (d1,d2)=>`krest_${d1}_${d2}(88)`, calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Тройник чугун SML',              brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, dns2:DN_SML, defaultDn2:100, priceKey: (d1,d2)=>`troynik_${d1}_${d2}(45)`, calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Крестовина одноплоскостная чугун SML 88°', brand:'Smart', unit:'шт', dnPairs:DN_PAIRS, defaultPair:'100_100', priceKey: p=>`krest_${p}(88)`, calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Тройник чугун SML',              brand:'Smart', unit:'шт', dnPairs:DN_PAIRS, defaultPair:'100_100', priceKey: p=>`troynik_${p}(45)`, calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
     { type:'мат', name:'Заглушка Konfix',                brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`zaglushka_${dn}`, calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) },
     { type:'мат', name:'Ревизия чугун SML',              brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`rev_${dn}`, calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
     { type:'мат', name:'Труба опорная',                  brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`opora_${dn}`, calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
@@ -689,25 +690,23 @@ function renderCalcK1() {
 
         // Диаметр
         const dnKey = material + '_' + i;
-        const dn2Key = dnKey + '_2';
         const currentDn = row.dns ? (selectedDns[dnKey] || row.defaultDn) : null;
-        const currentDn2 = row.dns2 ? (selectedDns[dn2Key] || row.defaultDn2) : null;
+        const currentPair = row.dnPairs ? (selectedDns[dnKey] || row.defaultPair) : null;
         let dnCell = '';
-        if (row.dns) {
-            const sel1 = `<select class="dn-select" onchange="onDnChange('${dnKey}',this.value)">` +
+        if (row.dnPairs) {
+            dnCell = `<select class="dn-select dn-select-pair" onchange="onDnChange('${dnKey}',this.value)">` +
+                row.dnPairs.map(p => {
+                    const label = p.replace('_','×');
+                    return `<option value="${p}"${p===currentPair?' selected':''}>${label}</option>`;
+                }).join('') + `</select>`;
+        } else if (row.dns) {
+            dnCell = `<select class="dn-select" onchange="onDnChange('${dnKey}',this.value)">` +
                 row.dns.map(d => `<option value="${d}"${d===currentDn?' selected':''}>${d}</option>`).join('') + `</select>`;
-            if (row.dns2) {
-                const sel2 = `<select class="dn-select" onchange="onDnChange('${dn2Key}',this.value)">` +
-                    row.dns2.map(d => `<option value="${d}"${d===currentDn2?' selected':''}>${d}</option>`).join('') + `</select>`;
-                dnCell = `<div class="dn-pair">${sel1}<span>×</span>${sel2}</div>`;
-            } else {
-                dnCell = sel1;
-            }
         }
 
-        // Цена: по priceKey(dn1,dn2) или статическому priceId
+        // Цена: по priceKey(dn/pair) или статическому priceId
         const priceId = row.priceKey
-            ? (row.dns2 ? row.priceKey(currentDn, currentDn2) : row.priceKey(currentDn))
+            ? row.priceKey(row.dnPairs ? currentPair : currentDn)
             : (row.priceId || '');
         let price = getPrice(priceId, selectedBrand);
         if (row.pricePer && price) price = +(price / row.pricePer).toFixed(2);
