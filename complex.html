@@ -709,6 +709,7 @@ function renderCalcK1() {
         <th style="text-align:left">Наименование</th>
         <th>Ед.</th>
         <th>ДН</th>
+        <th>Цена</th>
         ${buildings.map(b => {
             const exp = !!dnBldExpanded[b.id];
             return `<th>К${b.name} <span class="dn-toggle${exp?' active':''}" onclick="toggleBldDn(${b.id})" title="Индивидуальный ДН">⚙</span></th>`;
@@ -741,7 +742,6 @@ function renderCalcK1() {
         let totalCost = 0;
 
         const cells = buildings.map(b => {
-            if (isRab) return '<td></td>';
             const qty = row.calc(b.id);
             totalQty += qty;
 
@@ -751,7 +751,7 @@ function renderCalcK1() {
             const expanded = hasDn && !!dnBldExpanded[b.id];
 
             let priceId = row.priceId || '';
-            if (hasDn) priceId = row.priceKey(curDn);
+            if (hasDn && row.priceKey) priceId = row.priceKey(curDn);
 
             let price = getPrice(priceId, selectedBrand);
             if (row.pricePer && price) price = +(price / row.pricePer).toFixed(2);
@@ -759,7 +759,7 @@ function renderCalcK1() {
 
             // Селектор ДН (показывается только если ⚙ раскрыт для корпуса)
             let dnHtml = '';
-            if (expanded) {
+            if (expanded && hasDn) {
                 const opts = isPair ? row.dnPairs : row.dns;
                 dnHtml = `<select class="dn-mini${isPair?' dn-mini-pair':''}" onchange="onDnChange('${bldKey}',this.value)">` +
                     opts.map(o => {
@@ -768,13 +768,22 @@ function renderCalcK1() {
                     }).join('') + `</select>`;
             }
 
-            return expanded
+            return expanded && hasDn
                 ? `<td><div style="display:inline-flex;align-items:baseline;gap:2px">${dnHtml} <span>${fmt(qty)}</span></div></td>`
                 : `<td>${fmt(qty)}</td>`;
         }).join('');
 
         totalCost = +totalCost.toFixed(2);
-        if (!isRab) grandTotal += totalCost;
+        grandTotal += totalCost;
+
+        // Цена за единицу (по основному ДН)
+        let unitPrice = 0;
+        {
+            let pid = row.priceId || '';
+            if (hasDn && row.priceKey) pid = row.priceKey(mainDn);
+            unitPrice = getPrice(pid, selectedBrand);
+            if (row.pricePer && unitPrice) unitPrice = +(unitPrice / row.pricePer).toFixed(2);
+        }
 
         const brandLabel = row.brand ? selectedBrand : '';
         const nameText = brandLabel
@@ -785,16 +794,17 @@ function renderCalcK1() {
             <td class="type-cell">${row.type}</td>
             <td style="text-align:left;white-space:normal;max-width:200px">${nameText}</td>
             <td class="unit-cell">${row.unit}</td>
-            ${isRab ? '<td></td>' : dnCell}
-            ${isRab ? buildings.map(() => '<td></td>').join('') : cells}
+            ${hasDn ? dnCell : '<td></td>'}
+            <td style="color:#94a3b8;font-size:0.75rem">${unitPrice ? unitPrice.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+            ${cells}
             <td class="total-cell">${fmt(totalQty)}</td>
-            <td style="color:#10b981;font-weight:600">${totalCost ? totalCost.toLocaleString('ru-RU') : '—'}</td>
+            <td style="color:#10b981;font-weight:600">${totalCost ? totalCost.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
         </tr>`;
     }).join('');
 
     // Итого стоимость
     body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
-        <td colspan="${4 + buildings.length + 1}"></td>
+        <td colspan="${5 + buildings.length + 1}"></td>
         <td style="font-weight:700;color:#10b981">${grandTotal ? grandTotal.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
     </tr>`;
 }
