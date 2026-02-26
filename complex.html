@@ -156,10 +156,9 @@
         .dn-select:focus { border-color: #3b82f6; outline: none; }
         .dn-select-pair { width: 76px; }
 
-        .bld-cell { vertical-align: bottom; padding-top: 2px !important; padding-bottom: 4px !important; }
-        .dn-row { height: 22px; text-align: center; margin-bottom: 2px; }
-        .dn-row-spacer { height: 22px; }
-        .qty-row { text-align: center; }
+        .dn-cell { padding: 2px 4px !important; vertical-align: middle; }
+        .dn-line { display: flex; align-items: center; gap: 3px; margin: 2px 0; white-space: nowrap; }
+        .dn-label { color: #6b7280; font-size: 0.6rem; min-width: 18px; }
 
         .data-table .total-cell {
             font-weight: 700;
@@ -675,6 +674,7 @@ function renderCalcK1() {
     head.innerHTML = `<tr>
         <th style="width:30px;min-width:30px"></th>
         <th style="text-align:left">Наименование</th>
+        <th>ДН</th>
         <th>Ед. изм.</th>
         ${buildings.map(b => `<th>Корпус ${b.name}</th>`).join('')}
         <th>Итого</th>
@@ -684,40 +684,44 @@ function renderCalcK1() {
     let grandTotal = 0;
     body.innerHTML = rows.map((row, i) => {
         const isRab = row.type === 'раб';
-        const hasDn = !!(row.dns || row.dnPairs);
         let totalQty = 0;
         let totalCost = 0;
 
+        // ДН-селекторы (по одному на корпус) в левой колонке
+        let dnCell = '';
+        const dnPerBuilding = {}; // { buildingId: priceId }
+        if (row.dns || row.dnPairs) {
+            const parts = buildings.map(b => {
+                const dnKey = material + '_' + i + '_' + b.id;
+                if (row.dnPairs) {
+                    const cur = selectedDns[dnKey] || row.defaultPair;
+                    dnPerBuilding[b.id] = row.priceKey(cur);
+                    return `<div class="dn-line"><span class="dn-label">К${b.name}</span><select class="dn-select dn-select-pair" onchange="onDnChange('${dnKey}',this.value)">` +
+                        row.dnPairs.map(p => `<option value="${p}"${p===cur?' selected':''}>${p.replace('_','×')}</option>`).join('') +
+                        `</select></div>`;
+                } else {
+                    const cur = selectedDns[dnKey] || row.defaultDn;
+                    dnPerBuilding[b.id] = row.priceKey(cur);
+                    return `<div class="dn-line"><span class="dn-label">К${b.name}</span><select class="dn-select" onchange="onDnChange('${dnKey}',this.value)">` +
+                        row.dns.map(d => `<option value="${d}"${d===cur?' selected':''}>${d}</option>`).join('') +
+                        `</select></div>`;
+                }
+            });
+            dnCell = parts.join('');
+        }
+
+        // Ячейки корпусов — только числа
         const cells = buildings.map(b => {
             if (isRab) return '<td></td>';
-
             const qty = row.calc(b.id);
             totalQty += qty;
 
-            // ДН для этого корпуса
-            const dnKey = material + '_' + i + '_' + b.id;
-            let dnSelect = '';
-            let priceId = row.priceId || '';
-
-            if (row.dnPairs) {
-                const cur = selectedDns[dnKey] || row.defaultPair;
-                dnSelect = `<select class="dn-select dn-select-pair" onchange="onDnChange('${dnKey}',this.value)">` +
-                    row.dnPairs.map(p => `<option value="${p}"${p===cur?' selected':''}>${p.replace('_','×')}</option>`).join('') +
-                    `</select>`;
-                priceId = row.priceKey(cur);
-            } else if (row.dns) {
-                const cur = selectedDns[dnKey] || row.defaultDn;
-                dnSelect = `<select class="dn-select" onchange="onDnChange('${dnKey}',this.value)">` +
-                    row.dns.map(d => `<option value="${d}"${d===cur?' selected':''}>${d}</option>`).join('') +
-                    `</select>`;
-                priceId = row.priceKey(cur);
-            }
-
+            const priceId = dnPerBuilding[b.id] || row.priceId || '';
             let price = getPrice(priceId, selectedBrand);
             if (row.pricePer && price) price = +(price / row.pricePer).toFixed(2);
             totalCost += price * qty;
 
-            return `<td class="bld-cell">${dnSelect ? '<div class="dn-row">' + dnSelect + '</div>' : '<div class="dn-row-spacer"></div>'}<div class="qty-row">${fmt(qty)}</div></td>`;
+            return `<td>${fmt(qty)}</td>`;
         }).join('');
 
         totalCost = +totalCost.toFixed(2);
@@ -731,8 +735,9 @@ function renderCalcK1() {
         return `<tr class="${isRab ? 'row-rab' : 'row-mat'}">
             <td class="type-cell">${row.type}</td>
             <td style="text-align:left;white-space:normal;max-width:200px">${nameText}</td>
+            <td class="dn-cell">${dnCell}</td>
             <td class="unit-cell">${row.unit}</td>
-            ${cells}
+            ${isRab ? buildings.map(() => '<td></td>').join('') : cells}
             <td class="total-cell">${fmt(totalQty)}</td>
             <td style="color:#10b981;font-weight:600">${totalCost ? totalCost.toLocaleString('ru-RU') : '—'}</td>
         </tr>`;
@@ -740,7 +745,7 @@ function renderCalcK1() {
 
     // Итого стоимость
     body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
-        <td colspan="${3 + buildings.length + 1}"></td>
+        <td colspan="${4 + buildings.length + 1}"></td>
         <td style="font-weight:700;color:#10b981">${grandTotal ? grandTotal.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
     </tr>`;
 }
