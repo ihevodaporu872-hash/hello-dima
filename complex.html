@@ -156,20 +156,11 @@
         .dn-select:focus { border-color: #3b82f6; outline: none; }
         .dn-select-pair { width: 76px; }
 
-        .dn-cell { padding: 3px 4px !important; vertical-align: middle; }
-        .dn-main { display: flex; align-items: center; gap: 3px; white-space: nowrap; }
         .dn-toggle {
             cursor: pointer; font-size: 0.7rem; opacity: 0.4;
-            user-select: none; line-height: 1;
+            user-select: none; margin-left: 4px;
         }
         .dn-toggle:hover, .dn-toggle.active { opacity: 1; }
-        .dn-expanded {
-            margin-top: 3px; padding-top: 3px;
-            border-top: 1px solid #334155;
-            display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px;
-        }
-        .dn-line { display: flex; align-items: center; gap: 2px; white-space: nowrap; }
-        .dn-label { color: #6b7280; font-size: 0.58rem; min-width: 16px; }
 
         .data-table .total-cell {
             font-weight: 700;
@@ -671,20 +662,10 @@ function onDnChange(key, value) {
     recalculate();
 }
 
-// Общий ДН: при смене — применить ко всем корпусам этого ряда
-function onDnMain(material, rowIdx, value, buildingIds) {
-    const v = isNaN(+value) ? value : +value;
-    selectedDns[material + '_main_' + rowIdx] = v;
-    buildingIds.forEach(bid => {
-        selectedDns[material + '_' + rowIdx + '_' + bid] = v;
-    });
-    recalculate();
-}
+const dnBldExpanded = {}; // { 1: true, 2: false } — раскрыт ли ДН для корпуса
 
-const dnExpanded = {}; // { 'cast_iron_2': true } — раскрыт ли покорпусный выбор
-
-function toggleDnExpand(key) {
-    dnExpanded[key] = !dnExpanded[key];
+function toggleBldDn(bId) {
+    dnBldExpanded[bId] = !dnBldExpanded[bId];
     recalculate();
 }
 
@@ -702,9 +683,11 @@ function renderCalcK1() {
     head.innerHTML = `<tr>
         <th style="width:30px;min-width:30px"></th>
         <th style="text-align:left">Наименование</th>
-        <th>ДН</th>
         <th>Ед. изм.</th>
-        ${buildings.map(b => `<th>Корпус ${b.name}</th>`).join('')}
+        ${buildings.map(b => {
+            const exp = !!dnBldExpanded[b.id];
+            return `<th>Корпус ${b.name} <span class="dn-toggle${exp?' active':''}" onclick="toggleBldDn(${b.id})" title="Настроить ДН">⚙</span></th>`;
+        }).join('')}
         <th>Итого</th>
         <th>Стоимость</th>
     </tr>`;
@@ -715,64 +698,38 @@ function renderCalcK1() {
         let totalQty = 0;
         let totalCost = 0;
 
-        // ДН: один общий + кнопка ⚙ для покорпусного выбора
-        let dnCell = '';
-        const dnPerBuilding = {}; // { buildingId: priceId }
-        if (row.dns || row.dnPairs) {
-            const expKey = material + '_' + i;
-            const expanded = !!dnExpanded[expKey];
-            const isPair = !!row.dnPairs;
-            const opts = isPair ? row.dnPairs : row.dns;
-            const defVal = isPair ? row.defaultPair : row.defaultDn;
-            const mainVal = selectedDns[material + '_main_' + i] ?? defVal;
-            const bIds = buildings.map(b => b.id).join(',');
-
-            // Заполняем priceId для каждого корпуса
-            buildings.forEach(b => {
-                const bKey = material + '_' + i + '_' + b.id;
-                const cur = selectedDns[bKey] ?? mainVal;
-                dnPerBuilding[b.id] = row.priceKey(isPair ? cur : cur);
-            });
-
-            // Общий селектор
-            const mainSelect = `<select class="dn-select${isPair?' dn-select-pair':''}" onchange="onDnMain('${material}',${i},this.value,[${bIds}])">` +
-                opts.map(o => {
-                    const label = isPair ? o.replace('_','×') : o;
-                    const sel = (isPair ? o === mainVal : o === mainVal) ? ' selected' : '';
-                    return `<option value="${o}"${sel}>${label}</option>`;
-                }).join('') + `</select>`;
-
-            const toggleBtn = `<span class="dn-toggle${expanded?' active':''}" onclick="toggleDnExpand('${expKey}')" title="По корпусам">⚙</span>`;
-
-            dnCell = `<div class="dn-main">${mainSelect}${toggleBtn}</div>`;
-
-            // Покорпусный развёрнутый блок
-            if (expanded) {
-                const lines = buildings.map(b => {
-                    const bKey = material + '_' + i + '_' + b.id;
-                    const cur = selectedDns[bKey] ?? mainVal;
-                    return `<div class="dn-line"><span class="dn-label">К${b.name}</span><select class="dn-select${isPair?' dn-select-pair':''}" onchange="onDnChange('${bKey}',this.value)">` +
-                        opts.map(o => {
-                            const label = isPair ? o.replace('_','×') : o;
-                            return `<option value="${o}"${o==cur?' selected':''}>${label}</option>`;
-                        }).join('') + `</select></div>`;
-                }).join('');
-                dnCell += `<div class="dn-expanded">${lines}</div>`;
-            }
-        }
-
-        // Ячейки корпусов — только числа
         const cells = buildings.map(b => {
             if (isRab) return '<td></td>';
             const qty = row.calc(b.id);
             totalQty += qty;
 
-            const priceId = dnPerBuilding[b.id] || row.priceId || '';
+            // ДН для этого корпуса / материала
+            const hasDn = !!(row.dns || row.dnPairs);
+            const isPair = !!row.dnPairs;
+            const dnKey = material + '_' + i + '_' + b.id;
+            const defVal = isPair ? row.defaultPair : row.defaultDn;
+            const curDn = hasDn ? (selectedDns[dnKey] ?? defVal) : null;
+            const expanded = hasDn && !!dnBldExpanded[b.id];
+
+            let priceId = row.priceId || '';
+            if (hasDn) priceId = row.priceKey(curDn);
+
             let price = getPrice(priceId, selectedBrand);
             if (row.pricePer && price) price = +(price / row.pricePer).toFixed(2);
             totalCost += price * qty;
 
-            return `<td>${fmt(qty)}</td>`;
+            // Селектор ДН (показывается только если корпус раскрыт)
+            let dnHtml = '';
+            if (expanded) {
+                const opts = isPair ? row.dnPairs : row.dns;
+                dnHtml = `<select class="dn-select${isPair?' dn-select-pair':''}" onchange="onDnChange('${dnKey}',this.value)">` +
+                    opts.map(o => {
+                        const label = isPair ? o.replace('_','×') : o;
+                        return `<option value="${o}"${o==curDn?' selected':''}>${label}</option>`;
+                    }).join('') + `</select><br>`;
+            }
+
+            return `<td>${dnHtml}${fmt(qty)}</td>`;
         }).join('');
 
         totalCost = +totalCost.toFixed(2);
@@ -786,7 +743,6 @@ function renderCalcK1() {
         return `<tr class="${isRab ? 'row-rab' : 'row-mat'}">
             <td class="type-cell">${row.type}</td>
             <td style="text-align:left;white-space:normal;max-width:200px">${nameText}</td>
-            <td class="dn-cell">${dnCell}</td>
             <td class="unit-cell">${row.unit}</td>
             ${isRab ? buildings.map(() => '<td></td>').join('') : cells}
             <td class="total-cell">${fmt(totalQty)}</td>
@@ -796,7 +752,7 @@ function renderCalcK1() {
 
     // Итого стоимость
     body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
-        <td colspan="${4 + buildings.length + 1}"></td>
+        <td colspan="${3 + buildings.length + 1}"></td>
         <td style="font-weight:700;color:#10b981">${grandTotal ? grandTotal.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
     </tr>`;
 }
