@@ -143,6 +143,18 @@
             font-size: 0.72rem;
         }
 
+        .dn-select {
+            background: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            padding: 2px 4px;
+            font-size: 0.72rem;
+            cursor: pointer;
+            width: 60px;
+        }
+        .dn-select:focus { border-color: #3b82f6; outline: none; }
+
         .data-table .total-cell {
             font-weight: 700;
             color: #3b82f6;
@@ -489,18 +501,24 @@ function getPrice(priceId, brand) {
 }
 
 // === Материалы К1 ===
-// b = buildingId, priceId = id строки в Supabase
+// b = buildingId, dns = доступные диаметры, priceKey(dn) = id строки в Supabase
+// pricePer = делитель цены (3 = цена за 3м трубу → за 1м)
+const DN_SML = [50, 70, 80, 100, 125, 150, 200, 250, 300];
+const DN_PVC = [50, 110, 160];
+
+const selectedDns = {}; // { 'cast_iron_0': 100, ... } — запоминает выбранный ДН
+
 const MAT_CAST_IRON = [
     { type:'раб', name:'Монтаж трубы чугунной',                         unit:'м',  priceId:'montazh_truby_chug', calc: b => val('k1',b) * val('height',b) },
-    { type:'мат', name:'Труба чугунная SML L=3000 мм',   brand:'Smart', unit:'м',  priceId:'truba_100', calc: b => val('k1',b) * val('height',b) },
-    { type:'мат', name:'Крестовина одноплоскостная чугун SML 88°', brand:'Smart', unit:'шт', priceId:'krest_100_100(88)', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Тройник чугун SML',              brand:'Smart', unit:'шт', priceId:'troynik_100_100(45)', calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Заглушка Konfix',                brand:'Smart', unit:'шт', priceId:'zaglushka_100', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Ревизия чугун SML',              brand:'Smart', unit:'шт', priceId:'rev_100', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
-    { type:'мат', name:'Труба опорная',                  brand:'Smart', unit:'шт', priceId:'opora_100', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
-    { type:'мат', name:'Кольцо опорное',                 brand:'Smart', unit:'шт', priceId:'koltso_opornoe_100', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
-    { type:'мат', name:'Консоль опорная для чугунных труб', brand:'Smart', unit:'шт', priceId:'konsol_opornaya_100', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
-    { type:'мат', name:'Хомут Rapid',                    brand:'Smart', unit:'шт', priceId:'rapid_100', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) * 2 + Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) * 2 + Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) * 2 },
+    { type:'мат', name:'Труба чугунная SML L=3000 мм',   brand:'Smart', unit:'м',  dns:DN_SML, defaultDn:100, pricePer:3, priceKey: dn=>`truba_${dn}`, calc: b => val('k1',b) * val('height',b) },
+    { type:'мат', name:'Крестовина одноплоскостная чугун SML 88°', brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`krest_${dn}_${dn}(88)`, calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Тройник чугун SML',              brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`troynik_${dn}_${dn}(45)`, calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Заглушка Konfix',                brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`zaglushka_${dn}`, calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Ревизия чугун SML',              brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`rev_${dn}`, calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
+    { type:'мат', name:'Труба опорная',                  brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`opora_${dn}`, calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
+    { type:'мат', name:'Кольцо опорное',                 brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`koltso_opornoe_${dn}`, calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
+    { type:'мат', name:'Консоль опорная для чугунных труб', brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`konsol_opornaya_${dn}`, calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
+    { type:'мат', name:'Хомут Rapid',                    brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`rapid_${dn}`, calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) * 2 + Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) * 2 + Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) * 2 },
     { type:'мат', name:'Хомут для труб',                               unit:'шт', priceId:'khomut_trub', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
     { type:'мат', name:'Цанга М12',                                    unit:'шт', priceId:'tsanga_m12', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
     { type:'раб', name:'Монтаж теплоизоляции (гильзы)',                 unit:'шт', priceId:'montazh_teploizol', calc: b => val('k1',b) * val('floors',b) },
@@ -509,11 +527,11 @@ const MAT_CAST_IRON = [
 
 const MAT_PVC = [
     { type:'раб', name:'Монтаж труб ПВХ',                              unit:'м',  priceId:'montazh_truby_pvh', calc: b => val('k1',b) * val('height',b) },
-    { type:'мат', name:'Труба ПВХ L=3000 мм',             brand:true,  unit:'м',  priceId:'truba_pvh_110', calc: b => val('k1',b) * val('height',b) },
-    { type:'мат', name:'Крестовина одноплоскостная ПВХ 88°', brand:true, unit:'шт', priceId:'krest_pvh_110_110(88)', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Тройник ПВХ 88°',                 brand:true,  unit:'шт', priceId:'troynik_pvh_110_110(88)', calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Заглушка ПВХ',                    brand:true,  unit:'шт', priceId:'zaglushka_pvh_110', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Ревизия круглая ПВХ',             brand:true,  unit:'шт', priceId:'rev_pvh_110', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
+    { type:'мат', name:'Труба ПВХ L=3000 мм',             brand:true,  unit:'м',  dns:DN_PVC, defaultDn:110, pricePer:3, priceKey: dn=>`truba_pvh_${dn}`, calc: b => val('k1',b) * val('height',b) },
+    { type:'мат', name:'Крестовина одноплоскостная ПВХ 88°', brand:true, unit:'шт', dns:DN_PVC, defaultDn:110, priceKey: dn=>`krest_pvh_${dn}_${dn}(88)`, calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Тройник ПВХ 88°',                 brand:true,  unit:'шт', dns:DN_PVC, defaultDn:110, priceKey: dn=>`troynik_pvh_${dn}_${dn}(88)`, calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Заглушка ПВХ',                    brand:true,  unit:'шт', dns:DN_PVC, defaultDn:110, priceKey: dn=>`zaglushka_pvh_${dn}`, calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Ревизия круглая ПВХ',             brand:true,  unit:'шт', dns:DN_PVC, defaultDn:110, priceKey: dn=>`rev_pvh_${dn}`, calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
     { type:'мат', name:'Хомут для труб',                               unit:'шт', priceId:'khomut_trub_pvh', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
     { type:'мат', name:'Цанга М12',                                    unit:'шт', priceId:'tsanga_m12_pvh', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
     { type:'раб', name:'Монтаж муфты противопожарной (Огнеза)',         unit:'шт', priceId:'montazh_mufty', calc: b => val('k1',b) * val('floors',b) },
@@ -622,6 +640,11 @@ function onMaterialChange() {
     recalculate();
 }
 
+function onDnChange(key, value) {
+    selectedDns[key] = +value;
+    recalculate();
+}
+
 function renderCalcK1() {
     const materialSel = document.getElementById('material-k1');
     const material = materialSel ? materialSel.value : 'cast_iron';
@@ -636,6 +659,7 @@ function renderCalcK1() {
     head.innerHTML = `<tr>
         <th style="width:30px;min-width:30px"></th>
         <th style="text-align:left">Наименование</th>
+        <th>ДН</th>
         <th>Ед. изм.</th>
         ${buildings.map(b => `<th>Корпус ${b.name}</th>`).join('')}
         <th>Итого</th>
@@ -644,7 +668,7 @@ function renderCalcK1() {
     </tr>`;
 
     let grandTotal = 0;
-    body.innerHTML = rows.map(row => {
+    body.innerHTML = rows.map((row, i) => {
         const isRab = row.type === 'раб';
         let total = 0;
         const cells = buildings.map(b => {
@@ -653,7 +677,20 @@ function renderCalcK1() {
             return `<td>${fmt(v)}</td>`;
         }).join('');
 
-        const price = getPrice(row.priceId, selectedBrand);
+        // Диаметр
+        const dnKey = material + '_' + i;
+        const currentDn = row.dns ? (selectedDns[dnKey] || row.defaultDn) : null;
+        let dnCell = '';
+        if (row.dns) {
+            dnCell = `<select class="dn-select" onchange="onDnChange('${dnKey}',this.value)">` +
+                row.dns.map(d => `<option value="${d}"${d===currentDn?' selected':''}>${d}</option>`).join('') +
+                `</select>`;
+        }
+
+        // Цена: по priceKey(dn) или статическому priceId
+        const priceId = row.priceKey ? row.priceKey(currentDn) : (row.priceId || '');
+        let price = getPrice(priceId, selectedBrand);
+        if (row.pricePer && price) price = +(price / row.pricePer).toFixed(2);
         const cost = +(price * total).toFixed(2);
         if (!isRab) grandTotal += cost;
 
@@ -665,6 +702,7 @@ function renderCalcK1() {
         return `<tr class="${isRab ? 'row-rab' : 'row-mat'}">
             <td class="type-cell">${row.type}</td>
             <td style="text-align:left;white-space:normal;max-width:200px">${nameText}</td>
+            <td class="unit-cell">${dnCell}</td>
             <td class="unit-cell">${row.unit}</td>
             ${isRab ? buildings.map(() => '<td></td>').join('') : cells}
             <td class="total-cell">${fmt(total)}</td>
@@ -675,7 +713,7 @@ function renderCalcK1() {
 
     // Итого стоимость
     body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
-        <td colspan="${3 + buildings.length + 1}"></td>
+        <td colspan="${4 + buildings.length + 1}"></td>
         <td style="font-weight:700;color:#3b82f6;text-align:center">ИТОГО</td>
         <td style="font-weight:700;color:#10b981">${grandTotal ? grandTotal.toLocaleString('ru-RU') : '—'}</td>
     </tr>`;
