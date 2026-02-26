@@ -156,9 +156,19 @@
         .dn-select:focus { border-color: #3b82f6; outline: none; }
         .dn-select-pair { width: 76px; }
 
-        .dn-cell { padding: 2px 4px !important; vertical-align: middle; }
+        .dn-cell { padding: 3px 4px !important; vertical-align: middle; }
+        .dn-main { display: flex; align-items: center; gap: 3px; white-space: nowrap; }
+        .dn-toggle {
+            cursor: pointer; font-size: 0.7rem; opacity: 0.4;
+            user-select: none; line-height: 1;
+        }
+        .dn-toggle:hover, .dn-toggle.active { opacity: 1; }
+        .dn-expanded {
+            margin-top: 4px; padding-top: 4px;
+            border-top: 1px solid #334155;
+        }
         .dn-line { display: flex; align-items: center; gap: 3px; margin: 2px 0; white-space: nowrap; }
-        .dn-label { color: #6b7280; font-size: 0.6rem; min-width: 18px; }
+        .dn-label { color: #6b7280; font-size: 0.6rem; min-width: 20px; }
 
         .data-table .total-cell {
             font-weight: 700;
@@ -656,7 +666,24 @@ function onMaterialChange() {
 }
 
 function onDnChange(key, value) {
-    selectedDns[key] = +value;
+    selectedDns[key] = isNaN(+value) ? value : +value;
+    recalculate();
+}
+
+// Общий ДН: при смене — применить ко всем корпусам этого ряда
+function onDnMain(material, rowIdx, value, buildingIds) {
+    const v = isNaN(+value) ? value : +value;
+    selectedDns[material + '_main_' + rowIdx] = v;
+    buildingIds.forEach(bid => {
+        selectedDns[material + '_' + rowIdx + '_' + bid] = v;
+    });
+    recalculate();
+}
+
+const dnExpanded = {}; // { 'cast_iron_2': true } — раскрыт ли покорпусный выбор
+
+function toggleDnExpand(key) {
+    dnExpanded[key] = !dnExpanded[key];
     recalculate();
 }
 
@@ -687,27 +714,50 @@ function renderCalcK1() {
         let totalQty = 0;
         let totalCost = 0;
 
-        // ДН-селекторы (по одному на корпус) в левой колонке
+        // ДН: один общий + кнопка ⚙ для покорпусного выбора
         let dnCell = '';
         const dnPerBuilding = {}; // { buildingId: priceId }
         if (row.dns || row.dnPairs) {
-            const parts = buildings.map(b => {
-                const dnKey = material + '_' + i + '_' + b.id;
-                if (row.dnPairs) {
-                    const cur = selectedDns[dnKey] || row.defaultPair;
-                    dnPerBuilding[b.id] = row.priceKey(cur);
-                    return `<div class="dn-line"><span class="dn-label">К${b.name}</span><select class="dn-select dn-select-pair" onchange="onDnChange('${dnKey}',this.value)">` +
-                        row.dnPairs.map(p => `<option value="${p}"${p===cur?' selected':''}>${p.replace('_','×')}</option>`).join('') +
-                        `</select></div>`;
-                } else {
-                    const cur = selectedDns[dnKey] || row.defaultDn;
-                    dnPerBuilding[b.id] = row.priceKey(cur);
-                    return `<div class="dn-line"><span class="dn-label">К${b.name}</span><select class="dn-select" onchange="onDnChange('${dnKey}',this.value)">` +
-                        row.dns.map(d => `<option value="${d}"${d===cur?' selected':''}>${d}</option>`).join('') +
-                        `</select></div>`;
-                }
+            const expKey = material + '_' + i;
+            const expanded = !!dnExpanded[expKey];
+            const isPair = !!row.dnPairs;
+            const opts = isPair ? row.dnPairs : row.dns;
+            const defVal = isPair ? row.defaultPair : row.defaultDn;
+            const mainVal = selectedDns[material + '_main_' + i] ?? defVal;
+            const bIds = buildings.map(b => b.id).join(',');
+
+            // Заполняем priceId для каждого корпуса
+            buildings.forEach(b => {
+                const bKey = material + '_' + i + '_' + b.id;
+                const cur = selectedDns[bKey] ?? mainVal;
+                dnPerBuilding[b.id] = row.priceKey(isPair ? cur : cur);
             });
-            dnCell = parts.join('');
+
+            // Общий селектор
+            const mainSelect = `<select class="dn-select${isPair?' dn-select-pair':''}" onchange="onDnMain('${material}',${i},this.value,[${bIds}])">` +
+                opts.map(o => {
+                    const label = isPair ? o.replace('_','×') : o;
+                    const sel = (isPair ? o === mainVal : o === mainVal) ? ' selected' : '';
+                    return `<option value="${o}"${sel}>${label}</option>`;
+                }).join('') + `</select>`;
+
+            const toggleBtn = `<span class="dn-toggle${expanded?' active':''}" onclick="toggleDnExpand('${expKey}')" title="По корпусам">⚙</span>`;
+
+            dnCell = `<div class="dn-main">${mainSelect}${toggleBtn}</div>`;
+
+            // Покорпусный развёрнутый блок
+            if (expanded) {
+                const lines = buildings.map(b => {
+                    const bKey = material + '_' + i + '_' + b.id;
+                    const cur = selectedDns[bKey] ?? mainVal;
+                    return `<div class="dn-line"><span class="dn-label">К${b.name}</span><select class="dn-select${isPair?' dn-select-pair':''}" onchange="onDnChange('${bKey}',this.value)">` +
+                        opts.map(o => {
+                            const label = isPair ? o.replace('_','×') : o;
+                            return `<option value="${o}"${o==cur?' selected':''}>${label}</option>`;
+                        }).join('') + `</select></div>`;
+                }).join('');
+                dnCell += `<div class="dn-expanded">${lines}</div>`;
+            }
         }
 
         // Ячейки корпусов — только числа
