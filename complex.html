@@ -504,7 +504,6 @@ function getPrice(priceId, brand) {
 // b = buildingId, dns = доступные диаметры, priceKey(dn) = id строки в Supabase
 // pricePer = делитель цены (3 = цена за 3м трубу → за 1м)
 const DN_SML = [50, 70, 80, 100, 125, 150, 200, 250, 300];
-const DN_PVC = [50, 110, 160];
 
 const selectedDns = {}; // { 'cast_iron_0': 100, ... } — запоминает выбранный ДН
 
@@ -527,11 +526,11 @@ const MAT_CAST_IRON = [
 
 const MAT_PVC = [
     { type:'раб', name:'Монтаж труб ПВХ',                              unit:'м',  priceId:'montazh_truby_pvh', calc: b => val('k1',b) * val('height',b) },
-    { type:'мат', name:'Труба ПВХ L=3000 мм',             brand:true,  unit:'м',  dns:DN_PVC, defaultDn:110, pricePer:3, priceKey: dn=>`truba_pvh_${dn}`, calc: b => val('k1',b) * val('height',b) },
-    { type:'мат', name:'Крестовина одноплоскостная ПВХ 88°', brand:true, unit:'шт', dns:DN_PVC, defaultDn:110, dns2:DN_PVC, defaultDn2:110, priceKey: (d1,d2)=>`krest_pvh_${d1}_${d2}(88)`, calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Тройник ПВХ 88°',                 brand:true,  unit:'шт', dns:DN_PVC, defaultDn:110, dns2:DN_PVC, defaultDn2:110, priceKey: (d1,d2)=>`troynik_pvh_${d1}_${d2}(88)`, calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Заглушка ПВХ',                    brand:true,  unit:'шт', dns:DN_PVC, defaultDn:110, priceKey: dn=>`zaglushka_pvh_${dn}`, calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Ревизия круглая ПВХ',             brand:true,  unit:'шт', dns:DN_PVC, defaultDn:110, priceKey: dn=>`rev_pvh_${dn}`, calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
+    { type:'мат', name:'Труба ПВХ L=3000 мм',             brand:true,  unit:'м',  pricePer:3, priceId:'truba_pvh_110', calc: b => val('k1',b) * val('height',b) },
+    { type:'мат', name:'Крестовина одноплоскостная ПВХ 88°', brand:true, unit:'шт', priceId:'krest_pvh_110_110(88)', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Тройник ПВХ 88°',                 brand:true,  unit:'шт', priceId:'troynik_pvh_110_110(88)', calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Заглушка ПВХ',                    brand:true,  unit:'шт', priceId:'zaglushka_pvh_110', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Ревизия круглая ПВХ',             brand:true,  unit:'шт', priceId:'rev_pvh_110', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
     { type:'мат', name:'Хомут для труб',                               unit:'шт', priceId:'khomut_trub_pvh', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
     { type:'мат', name:'Цанга М12',                                    unit:'шт', priceId:'tsanga_m12_pvh', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
     { type:'раб', name:'Монтаж муфты противопожарной (Огнеза)',         unit:'шт', priceId:'montazh_mufty', calc: b => val('k1',b) * val('floors',b) },
