@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Расчёт инженерных систем — Жилой комплекс</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -447,36 +448,76 @@ const DEFAULTS = {
     apartments:{ 1: '', 2: '', 3: '',  4: '' },
 };
 
+// === Supabase ===
+const SUPABASE_URL = 'https://dnytjdnzudzphgkkskni.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_qDHNDEimzRMF1DDNTVNdeQ_LO2WRpQ-';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Маппинг бренда → колонка в Supabase
+const BRAND_COL = {
+    'AVF': 'price_avf',
+    'Smart': 'price_smart',
+    'Con-Pipe': 'price_conpipe',
+    'Pam-Global': 'price_pamglobal',
+    'Halifax': 'price_halifax',
+    'Контур-Уют': 'price_kontur',
+    'РосТурПласт': 'price_rosturplast',
+    'Ostendorf': 'price_ostendorf',
+    'Pro Aqua': 'price_proaqua',
+    'Rehau': 'price_rehau',
+    'Синикон': 'price_sinikon',
+    'Uponor': 'price_uponor',
+    'Valfex': 'price_valfex',
+};
+
+let pricesData = {}; // { id: { price_avf: 100, price_smart: 200, ... } }
+
+async function loadPrices() {
+    try {
+        const { data, error } = await sb.from('Master Catalog').select('*');
+        if (error) { console.error('Supabase error:', error); return; }
+        pricesData = {};
+        (data || []).forEach(row => { pricesData[row.id] = row; });
+        recalculate();
+    } catch(e) { console.error('Ошибка загрузки цен:', e); }
+}
+
+function getPrice(priceId, brand) {
+    if (!priceId || !pricesData[priceId]) return 0;
+    const col = BRAND_COL[brand] || '';
+    return parseFloat(pricesData[priceId][col]) || 0;
+}
+
 // === Материалы К1 ===
-// b = buildingId, v() = val shortcut
+// b = buildingId, priceId = id строки в Supabase
 const MAT_CAST_IRON = [
-    { type:'раб', name:'Монтаж трубы чугунной',                         unit:'м',  calc: b => val('k1',b) * val('height',b) },
-    { type:'мат', name:'Труба чугунная SML L=3000 мм',   brand:'Smart', unit:'м',  calc: b => val('k1',b) * val('height',b) },
-    { type:'мат', name:'Крестовина одноплоскостная чугун SML 88°', brand:'Smart', unit:'шт', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Тройник чугун SML',              brand:'Smart', unit:'шт', calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Заглушка Konfix',                brand:'Smart', unit:'шт', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Ревизия чугун SML',              brand:'Smart', unit:'шт', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
-    { type:'мат', name:'Труба опорная',                  brand:'Smart', unit:'шт', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
-    { type:'мат', name:'Кольцо опорное',                 brand:'Smart', unit:'шт', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
-    { type:'мат', name:'Консоль опорная для чугунных труб', brand:'Smart', unit:'шт', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
-    { type:'мат', name:'Хомут Rapid',                    brand:'Smart', unit:'шт', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) * 2 + Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) * 2 + Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) * 2 },
-    { type:'мат', name:'Хомут для труб',                               unit:'шт', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
-    { type:'мат', name:'Цанга М12',                                    unit:'шт', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
-    { type:'раб', name:'Монтаж теплоизоляции (гильзы)',                 unit:'шт', calc: b => val('k1',b) * val('floors',b) },
-    { type:'мат', name:'Цилиндр теплоизол. Ду125 (L=0,3 м) на гильзы', unit:'м', calc: b => +(val('k1',b) * val('floors',b) * 0.3).toFixed(1) },
+    { type:'раб', name:'Монтаж трубы чугунной',                         unit:'м',  priceId:'montazh_truby_chug', calc: b => val('k1',b) * val('height',b) },
+    { type:'мат', name:'Труба чугунная SML L=3000 мм',   brand:'Smart', unit:'м',  priceId:'truba_sml', calc: b => val('k1',b) * val('height',b) },
+    { type:'мат', name:'Крестовина одноплоскостная чугун SML 88°', brand:'Smart', unit:'шт', priceId:'krestovina_sml_88', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Тройник чугун SML',              brand:'Smart', unit:'шт', priceId:'troynik_sml', calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Заглушка Konfix',                brand:'Smart', unit:'шт', priceId:'zaglushka_konfix', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Ревизия чугун SML',              brand:'Smart', unit:'шт', priceId:'reviziya_sml', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
+    { type:'мат', name:'Труба опорная',                  brand:'Smart', unit:'шт', priceId:'truba_opornaya', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
+    { type:'мат', name:'Кольцо опорное',                 brand:'Smart', unit:'шт', priceId:'koltso_opornoe', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
+    { type:'мат', name:'Консоль опорная для чугунных труб', brand:'Smart', unit:'шт', priceId:'konsol_opornaya', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
+    { type:'мат', name:'Хомут Rapid',                    brand:'Smart', unit:'шт', priceId:'khomut_rapid', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) * 2 + Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) * 2 + Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) * 2 },
+    { type:'мат', name:'Хомут для труб',                               unit:'шт', priceId:'khomut_trub', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
+    { type:'мат', name:'Цанга М12',                                    unit:'шт', priceId:'tsanga_m12', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
+    { type:'раб', name:'Монтаж теплоизоляции (гильзы)',                 unit:'шт', priceId:'montazh_teploizol', calc: b => val('k1',b) * val('floors',b) },
+    { type:'мат', name:'Цилиндр теплоизол. Ду125 (L=0,3 м) на гильзы', unit:'м', priceId:'tsilindr_teploizol', calc: b => +(val('k1',b) * val('floors',b) * 0.3).toFixed(1) },
 ];
 
 const MAT_PVC = [
-    { type:'раб', name:'Монтаж труб ПВХ',                              unit:'м',  calc: b => val('k1',b) * val('height',b) },
-    { type:'мат', name:'Труба ПВХ L=3000 мм',             brand:true,  unit:'м',  calc: b => val('k1',b) * val('height',b) },
-    { type:'мат', name:'Крестовина одноплоскостная ПВХ 88°', brand:true, unit:'шт', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Тройник ПВХ 88°',                 brand:true,  unit:'шт', calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Заглушка ПВХ',                    brand:true,  unit:'шт', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Ревизия круглая ПВХ',             brand:true,  unit:'шт', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
-    { type:'мат', name:'Хомут для труб',                               unit:'шт', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
-    { type:'мат', name:'Цанга М12',                                    unit:'шт', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
-    { type:'раб', name:'Монтаж муфты противопожарной (Огнеза)',         unit:'шт', calc: b => val('k1',b) * val('floors',b) },
-    { type:'мат', name:'Муфта противопожарная "ОГНЕЗА-ПМ/110"',        unit:'шт', calc: b => val('k1',b) * val('floors',b) },
+    { type:'раб', name:'Монтаж труб ПВХ',                              unit:'м',  priceId:'montazh_truby_pvh', calc: b => val('k1',b) * val('height',b) },
+    { type:'мат', name:'Труба ПВХ L=3000 мм',             brand:true,  unit:'м',  priceId:'truba_pvh', calc: b => val('k1',b) * val('height',b) },
+    { type:'мат', name:'Крестовина одноплоскостная ПВХ 88°', brand:true, unit:'шт', priceId:'krestovina_pvh_88', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Тройник ПВХ 88°',                 brand:true,  unit:'шт', priceId:'troynik_pvh', calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Заглушка ПВХ',                    brand:true,  unit:'шт', priceId:'zaglushka_pvh', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Ревизия круглая ПВХ',             brand:true,  unit:'шт', priceId:'reviziya_pvh', calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
+    { type:'мат', name:'Хомут для труб',                               unit:'шт', priceId:'khomut_trub_pvh', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
+    { type:'мат', name:'Цанга М12',                                    unit:'шт', priceId:'tsanga_m12_pvh', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
+    { type:'раб', name:'Монтаж муфты противопожарной (Огнеза)',         unit:'шт', priceId:'montazh_mufty', calc: b => val('k1',b) * val('floors',b) },
+    { type:'мат', name:'Муфта противопожарная "ОГНЕЗА-ПМ/110"',        unit:'шт', priceId:'mufta_ogneza', calc: b => val('k1',b) * val('floors',b) },
 ];
 
 // === Сохранение в localStorage ===
@@ -598,8 +639,11 @@ function renderCalcK1() {
         <th>Ед. изм.</th>
         ${buildings.map(b => `<th>Корпус ${b.name}</th>`).join('')}
         <th>Итого</th>
+        <th>Цена</th>
+        <th>Стоимость</th>
     </tr>`;
 
+    let grandTotal = 0;
     body.innerHTML = rows.map(row => {
         const isRab = row.type === 'раб';
         let total = 0;
@@ -608,6 +652,10 @@ function renderCalcK1() {
             total += v;
             return `<td>${fmt(v)}</td>`;
         }).join('');
+
+        const price = getPrice(row.priceId, selectedBrand);
+        const cost = +(price * total).toFixed(2);
+        if (!isRab) grandTotal += cost;
 
         const brandLabel = row.brand ? selectedBrand : '';
         const nameText = brandLabel
@@ -620,8 +668,17 @@ function renderCalcK1() {
             <td class="unit-cell">${row.unit}</td>
             ${isRab ? buildings.map(() => '<td></td>').join('') : cells}
             <td class="total-cell">${fmt(total)}</td>
+            <td style="color:#9ca3af">${price ? price.toLocaleString('ru-RU') : '—'}</td>
+            <td style="color:#10b981;font-weight:600">${cost ? cost.toLocaleString('ru-RU') : '—'}</td>
         </tr>`;
     }).join('');
+
+    // Итого стоимость
+    body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
+        <td colspan="${3 + buildings.length + 1}"></td>
+        <td style="font-weight:700;color:#3b82f6;text-align:center">ИТОГО</td>
+        <td style="font-weight:700;color:#10b981">${grandTotal ? grandTotal.toLocaleString('ru-RU') : '—'}</td>
+    </tr>`;
 }
 
 // === Управление корпусами ===
@@ -667,6 +724,7 @@ function switchTab(tabId, linkEl) {
 // === Инициализация ===
 loadData();
 render();
+loadPrices();
 
 // Восстановление активной вкладки
 const savedTab = localStorage.getItem('complex_active_tab');
