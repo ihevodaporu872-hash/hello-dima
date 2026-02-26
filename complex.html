@@ -155,6 +155,21 @@
         }
         .dn-select:focus { border-color: #3b82f6; outline: none; }
         .dn-select-pair { width: 76px; }
+        .dn-mini {
+            background: transparent;
+            color: #64748b;
+            border: none;
+            border-bottom: 1px dashed #334155;
+            border-radius: 0;
+            padding: 0 1px;
+            font-size: 0.58rem;
+            cursor: pointer;
+            width: 36px;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        .dn-mini:focus { border-bottom-color: #3b82f6; outline: none; }
+        .dn-mini-pair { width: 52px; }
 
         .dn-toggle {
             cursor: pointer; font-size: 0.7rem; opacity: 0.4;
@@ -746,7 +761,7 @@ function renderCalcK1() {
             let dnHtml = '';
             if (expanded) {
                 const opts = isPair ? row.dnPairs : row.dns;
-                dnHtml = `<select class="dn-select${isPair?' dn-select-pair':''}" onchange="onDnChange('${bldKey}',this.value)">` +
+                dnHtml = `<select class="dn-mini${isPair?' dn-mini-pair':''}" onchange="onDnChange('${bldKey}',this.value)">` +
                     opts.map(o => {
                         const label = isPair ? o.replace('_','×') : o;
                         return `<option value="${o}"${o==curDn?' selected':''}>${label}</option>`;
@@ -754,7 +769,7 @@ function renderCalcK1() {
             }
 
             return expanded
-                ? `<td><div style="display:flex;align-items:center;gap:4px">${dnHtml}<span style="flex:1;text-align:right">${fmt(qty)}</span></div></td>`
+                ? `<td><div style="display:inline-flex;align-items:baseline;gap:2px">${dnHtml} <span>${fmt(qty)}</span></div></td>`
                 : `<td>${fmt(qty)}</td>`;
         }).join('');
 
