@@ -492,7 +492,7 @@ function getPrice(priceId, brand) {
 // b = buildingId, priceId = id строки в Supabase
 const MAT_CAST_IRON = [
     { type:'раб', name:'Монтаж трубы чугунной',                         unit:'м',  priceId:'montazh_truby_chug', calc: b => val('k1',b) * val('height',b) },
-    { type:'мат', name:'Труба чугунная SML L=3000 мм',   brand:'Smart', unit:'м',  priceId:'truba_sml', calc: b => val('k1',b) * val('height',b) },
+    { type:'мат', name:'Труба чугунная SML L=3000 мм',   brand:'Smart', unit:'м',  priceId:'truba_100', calc: b => val('k1',b) * val('height',b) },
     { type:'мат', name:'Крестовина одноплоскостная чугун SML 88°', brand:'Smart', unit:'шт', priceId:'krestovina_sml_88', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
     { type:'мат', name:'Тройник чугун SML',              brand:'Smart', unit:'шт', priceId:'troynik_sml', calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
     { type:'мат', name:'Заглушка Konfix',                brand:'Smart', unit:'шт', priceId:'zaglushka_konfix', calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) },
