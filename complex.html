@@ -750,10 +750,12 @@ function renderCalcK1() {
                     opts.map(o => {
                         const label = isPair ? o.replace('_','×') : o;
                         return `<option value="${o}"${o==curDn?' selected':''}>${label}</option>`;
-                    }).join('') + `</select><br>`;
+                    }).join('') + `</select>`;
             }
 
-            return `<td>${dnHtml}${fmt(qty)}</td>`;
+            return expanded
+                ? `<td><span style="display:inline-flex;align-items:center;gap:3px">${dnHtml}<span>${fmt(qty)}</span></span></td>`
+                : `<td>${fmt(qty)}</td>`;
         }).join('');
 
         totalCost = +totalCost.toFixed(2);
