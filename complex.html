@@ -156,6 +156,11 @@
         .dn-select:focus { border-color: #3b82f6; outline: none; }
         .dn-select-pair { width: 76px; }
 
+        .bld-cell { vertical-align: bottom; padding-top: 2px !important; padding-bottom: 4px !important; }
+        .dn-row { height: 22px; text-align: center; margin-bottom: 2px; }
+        .dn-row-spacer { height: 22px; }
+        .qty-row { text-align: center; }
+
         .data-table .total-cell {
             font-weight: 700;
             color: #3b82f6;
@@ -712,7 +717,7 @@ function renderCalcK1() {
             if (row.pricePer && price) price = +(price / row.pricePer).toFixed(2);
             totalCost += price * qty;
 
-            return `<td>${dnSelect ? dnSelect + ' ' : ''}${fmt(qty)}</td>`;
+            return `<td class="bld-cell">${dnSelect ? '<div class="dn-row">' + dnSelect + '</div>' : '<div class="dn-row-spacer"></div>'}<div class="qty-row">${fmt(qty)}</div></td>`;
         }).join('');
 
         totalCost = +totalCost.toFixed(2);
