@@ -670,48 +670,53 @@ function renderCalcK1() {
     head.innerHTML = `<tr>
         <th style="width:30px;min-width:30px"></th>
         <th style="text-align:left">Наименование</th>
-        <th>ДН</th>
         <th>Ед. изм.</th>
         ${buildings.map(b => `<th>Корпус ${b.name}</th>`).join('')}
         <th>Итого</th>
-        <th>Цена</th>
         <th>Стоимость</th>
     </tr>`;
 
     let grandTotal = 0;
     body.innerHTML = rows.map((row, i) => {
         const isRab = row.type === 'раб';
-        let total = 0;
+        const hasDn = !!(row.dns || row.dnPairs);
+        let totalQty = 0;
+        let totalCost = 0;
+
         const cells = buildings.map(b => {
-            const v = row.calc(b.id);
-            total += v;
-            return `<td>${fmt(v)}</td>`;
+            if (isRab) return '<td></td>';
+
+            const qty = row.calc(b.id);
+            totalQty += qty;
+
+            // ДН для этого корпуса
+            const dnKey = material + '_' + i + '_' + b.id;
+            let dnSelect = '';
+            let priceId = row.priceId || '';
+
+            if (row.dnPairs) {
+                const cur = selectedDns[dnKey] || row.defaultPair;
+                dnSelect = `<select class="dn-select dn-select-pair" onchange="onDnChange('${dnKey}',this.value)">` +
+                    row.dnPairs.map(p => `<option value="${p}"${p===cur?' selected':''}>${p.replace('_','×')}</option>`).join('') +
+                    `</select>`;
+                priceId = row.priceKey(cur);
+            } else if (row.dns) {
+                const cur = selectedDns[dnKey] || row.defaultDn;
+                dnSelect = `<select class="dn-select" onchange="onDnChange('${dnKey}',this.value)">` +
+                    row.dns.map(d => `<option value="${d}"${d===cur?' selected':''}>${d}</option>`).join('') +
+                    `</select>`;
+                priceId = row.priceKey(cur);
+            }
+
+            let price = getPrice(priceId, selectedBrand);
+            if (row.pricePer && price) price = +(price / row.pricePer).toFixed(2);
+            totalCost += price * qty;
+
+            return `<td>${dnSelect ? dnSelect + ' ' : ''}${fmt(qty)}</td>`;
         }).join('');
 
-        // Диаметр
-        const dnKey = material + '_' + i;
-        const currentDn = row.dns ? (selectedDns[dnKey] || row.defaultDn) : null;
-        const currentPair = row.dnPairs ? (selectedDns[dnKey] || row.defaultPair) : null;
-        let dnCell = '';
-        if (row.dnPairs) {
-            dnCell = `<select class="dn-select dn-select-pair" onchange="onDnChange('${dnKey}',this.value)">` +
-                row.dnPairs.map(p => {
-                    const label = p.replace('_','×');
-                    return `<option value="${p}"${p===currentPair?' selected':''}>${label}</option>`;
-                }).join('') + `</select>`;
-        } else if (row.dns) {
-            dnCell = `<select class="dn-select" onchange="onDnChange('${dnKey}',this.value)">` +
-                row.dns.map(d => `<option value="${d}"${d===currentDn?' selected':''}>${d}</option>`).join('') + `</select>`;
-        }
-
-        // Цена: по priceKey(dn/pair) или статическому priceId
-        const priceId = row.priceKey
-            ? row.priceKey(row.dnPairs ? currentPair : currentDn)
-            : (row.priceId || '');
-        let price = getPrice(priceId, selectedBrand);
-        if (row.pricePer && price) price = +(price / row.pricePer).toFixed(2);
-        const cost = +(price * total).toFixed(2);
-        if (!isRab) grandTotal += cost;
+        totalCost = +totalCost.toFixed(2);
+        if (!isRab) grandTotal += totalCost;
 
         const brandLabel = row.brand ? selectedBrand : '';
         const nameText = brandLabel
@@ -721,20 +726,17 @@ function renderCalcK1() {
         return `<tr class="${isRab ? 'row-rab' : 'row-mat'}">
             <td class="type-cell">${row.type}</td>
             <td style="text-align:left;white-space:normal;max-width:200px">${nameText}</td>
-            <td class="unit-cell">${dnCell}</td>
             <td class="unit-cell">${row.unit}</td>
-            ${isRab ? buildings.map(() => '<td></td>').join('') : cells}
-            <td class="total-cell">${fmt(total)}</td>
-            <td style="color:#9ca3af">${price ? price.toLocaleString('ru-RU') : '—'}</td>
-            <td style="color:#10b981;font-weight:600">${cost ? cost.toLocaleString('ru-RU') : '—'}</td>
+            ${cells}
+            <td class="total-cell">${fmt(totalQty)}</td>
+            <td style="color:#10b981;font-weight:600">${totalCost ? totalCost.toLocaleString('ru-RU') : '—'}</td>
         </tr>`;
     }).join('');
 
     // Итого стоимость
     body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
-        <td colspan="${4 + buildings.length + 1}"></td>
-        <td style="font-weight:700;color:#3b82f6;text-align:center">ИТОГО</td>
-        <td style="font-weight:700;color:#10b981">${grandTotal ? grandTotal.toLocaleString('ru-RU') : '—'}</td>
+        <td colspan="${3 + buildings.length + 1}"></td>
+        <td style="font-weight:700;color:#10b981">${grandTotal ? grandTotal.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
     </tr>`;
 }
 
