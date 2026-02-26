@@ -148,10 +148,10 @@
             color: #e2e8f0;
             border: 1px solid #334155;
             border-radius: 4px;
-            padding: 2px 4px;
-            font-size: 0.72rem;
+            padding: 2px 2px;
+            font-size: 0.7rem;
             cursor: pointer;
-            width: 60px;
+            width: 52px;
         }
         .dn-select:focus { border-color: #3b82f6; outline: none; }
 
@@ -511,8 +511,8 @@ const selectedDns = {}; // { 'cast_iron_0': 100, ... } — запоминает 
 const MAT_CAST_IRON = [
     { type:'раб', name:'Монтаж трубы чугунной',                         unit:'м',  priceId:'montazh_truby_chug', calc: b => val('k1',b) * val('height',b) },
     { type:'мат', name:'Труба чугунная SML L=3000 мм',   brand:'Smart', unit:'м',  dns:DN_SML, defaultDn:100, pricePer:3, priceKey: dn=>`truba_${dn}`, calc: b => val('k1',b) * val('height',b) },
-    { type:'мат', name:'Крестовина одноплоскостная чугун SML 88°', brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`krest_${dn}_${dn}(88)`, calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Тройник чугун SML',              brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`troynik_${dn}_${dn}(45)`, calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Крестовина одноплоскостная чугун SML 88°', brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, dns2:DN_SML, defaultDn2:100, priceKey: (d1,d2)=>`krest_${d1}_${d2}(88)`, calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Тройник чугун SML',              brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, dns2:DN_SML, defaultDn2:100, priceKey: (d1,d2)=>`troynik_${d1}_${d2}(45)`, calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
     { type:'мат', name:'Заглушка Konfix',                brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`zaglushka_${dn}`, calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) },
     { type:'мат', name:'Ревизия чугун SML',              brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`rev_${dn}`, calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
     { type:'мат', name:'Труба опорная',                  brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`opora_${dn}`, calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
@@ -528,8 +528,8 @@ const MAT_CAST_IRON = [
 const MAT_PVC = [
     { type:'раб', name:'Монтаж труб ПВХ',                              unit:'м',  priceId:'montazh_truby_pvh', calc: b => val('k1',b) * val('height',b) },
     { type:'мат', name:'Труба ПВХ L=3000 мм',             brand:true,  unit:'м',  dns:DN_PVC, defaultDn:110, pricePer:3, priceKey: dn=>`truba_pvh_${dn}`, calc: b => val('k1',b) * val('height',b) },
-    { type:'мат', name:'Крестовина одноплоскостная ПВХ 88°', brand:true, unit:'шт', dns:DN_PVC, defaultDn:110, priceKey: dn=>`krest_pvh_${dn}_${dn}(88)`, calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
-    { type:'мат', name:'Тройник ПВХ 88°',                 brand:true,  unit:'шт', dns:DN_PVC, defaultDn:110, priceKey: dn=>`troynik_pvh_${dn}_${dn}(88)`, calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Крестовина одноплоскостная ПВХ 88°', brand:true, unit:'шт', dns:DN_PVC, defaultDn:110, dns2:DN_PVC, defaultDn2:110, priceKey: (d1,d2)=>`krest_pvh_${d1}_${d2}(88)`, calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) },
+    { type:'мат', name:'Тройник ПВХ 88°',                 brand:true,  unit:'шт', dns:DN_PVC, defaultDn:110, dns2:DN_PVC, defaultDn2:110, priceKey: (d1,d2)=>`troynik_pvh_${d1}_${d2}(88)`, calc: b => Math.floor(val('k1',b) * val('floors',b) / 2) },
     { type:'мат', name:'Заглушка ПВХ',                    brand:true,  unit:'шт', dns:DN_PVC, defaultDn:110, priceKey: dn=>`zaglushka_pvh_${dn}`, calc: b => Math.ceil(val('k1',b) * val('floors',b) / 2) * 2 + Math.floor(val('k1',b) * val('floors',b) / 2) },
     { type:'мат', name:'Ревизия круглая ПВХ',             brand:true,  unit:'шт', dns:DN_PVC, defaultDn:110, priceKey: dn=>`rev_pvh_${dn}`, calc: b => Math.ceil(val('k1',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
     { type:'мат', name:'Хомут для труб',                               unit:'шт', priceId:'khomut_trub_pvh', calc: b => Math.floor(val('k1',b) * val('height',b) / 1.65) },
@@ -679,16 +679,26 @@ function renderCalcK1() {
 
         // Диаметр
         const dnKey = material + '_' + i;
+        const dn2Key = dnKey + '_2';
         const currentDn = row.dns ? (selectedDns[dnKey] || row.defaultDn) : null;
+        const currentDn2 = row.dns2 ? (selectedDns[dn2Key] || row.defaultDn2) : null;
         let dnCell = '';
         if (row.dns) {
             dnCell = `<select class="dn-select" onchange="onDnChange('${dnKey}',this.value)">` +
                 row.dns.map(d => `<option value="${d}"${d===currentDn?' selected':''}>${d}</option>`).join('') +
                 `</select>`;
+            if (row.dns2) {
+                dnCell += `<span style="color:#6b7280;margin:0 2px">×</span>` +
+                    `<select class="dn-select" onchange="onDnChange('${dn2Key}',this.value)">` +
+                    row.dns2.map(d => `<option value="${d}"${d===currentDn2?' selected':''}>${d}</option>`).join('') +
+                    `</select>`;
+            }
         }
 
-        // Цена: по priceKey(dn) или статическому priceId
-        const priceId = row.priceKey ? row.priceKey(currentDn) : (row.priceId || '');
+        // Цена: по priceKey(dn1,dn2) или статическому priceId
+        const priceId = row.priceKey
+            ? (row.dns2 ? row.priceKey(currentDn, currentDn2) : row.priceKey(currentDn))
+            : (row.priceId || '');
         let price = getPrice(priceId, selectedBrand);
         if (row.pricePer && price) price = +(price / row.pricePer).toFixed(2);
         const cost = +(price * total).toFixed(2);
