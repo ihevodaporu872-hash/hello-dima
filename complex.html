@@ -154,6 +154,17 @@
             width: 52px;
         }
         .dn-select:focus { border-color: #3b82f6; outline: none; }
+        .dn-pair {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            padding: 1px 2px;
+        }
+        .dn-pair span { color: #6b7280; font-size: 0.65rem; }
+        .dn-pair .dn-select { border: none; width: 46px; padding: 1px 0; }
 
         .data-table .total-cell {
             font-weight: 700;
@@ -683,14 +694,14 @@ function renderCalcK1() {
         const currentDn2 = row.dns2 ? (selectedDns[dn2Key] || row.defaultDn2) : null;
         let dnCell = '';
         if (row.dns) {
-            dnCell = `<select class="dn-select" onchange="onDnChange('${dnKey}',this.value)">` +
-                row.dns.map(d => `<option value="${d}"${d===currentDn?' selected':''}>${d}</option>`).join('') +
-                `</select>`;
+            const sel1 = `<select class="dn-select" onchange="onDnChange('${dnKey}',this.value)">` +
+                row.dns.map(d => `<option value="${d}"${d===currentDn?' selected':''}>${d}</option>`).join('') + `</select>`;
             if (row.dns2) {
-                dnCell += `<span style="color:#6b7280;margin:0 2px">×</span>` +
-                    `<select class="dn-select" onchange="onDnChange('${dn2Key}',this.value)">` +
-                    row.dns2.map(d => `<option value="${d}"${d===currentDn2?' selected':''}>${d}</option>`).join('') +
-                    `</select>`;
+                const sel2 = `<select class="dn-select" onchange="onDnChange('${dn2Key}',this.value)">` +
+                    row.dns2.map(d => `<option value="${d}"${d===currentDn2?' selected':''}>${d}</option>`).join('') + `</select>`;
+                dnCell = `<div class="dn-pair">${sel1}<span>×</span>${sel2}</div>`;
+            } else {
+                dnCell = sel1;
             }
         }
 
