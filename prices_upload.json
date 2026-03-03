@@ -4,7 +4,7 @@
     "price_avf": 150,
     "price_smart": 150,
     "price_conpipe": 150,
-    "price_pamglobal": 150
+    "price_pamglobal": 105
   },
   {
     "id": "koltso_opornoe_100",
@@ -54,101 +54,101 @@
     "price_avf": 2500,
     "price_smart": 2500,
     "price_conpipe": 2500,
-    "price_pamglobal": 2500
+    "price_pamglobal": 1750
   },
   {
     "id": "konsol_opornaya_125",
     "price_avf": 2500,
     "price_smart": 2500,
     "price_conpipe": 2500,
-    "price_pamglobal": 2500
+    "price_pamglobal": 1750
   },
   {
     "id": "konsol_opornaya_150",
     "price_avf": 2500,
     "price_smart": 2500,
     "price_conpipe": 2500,
-    "price_pamglobal": 2500
+    "price_pamglobal": 1750
   },
   {
     "id": "konsol_opornaya_200",
     "price_avf": 2500,
     "price_smart": 2500,
     "price_conpipe": 2500,
-    "price_pamglobal": 2500
+    "price_pamglobal": 1750
   },
   {
     "id": "konsol_opornaya_250",
     "price_avf": 2500,
     "price_smart": 2500,
     "price_conpipe": 2500,
-    "price_pamglobal": 2500
+    "price_pamglobal": 1750
   },
   {
     "id": "konsol_opornaya_300",
     "price_avf": 2500,
     "price_smart": 2500,
     "price_conpipe": 2500,
-    "price_pamglobal": 2500
+    "price_pamglobal": 1750
   },
   {
     "id": "konsol_opornaya_50",
     "price_avf": 2500,
     "price_smart": 2500,
     "price_conpipe": 2500,
-    "price_pamglobal": 2500
+    "price_pamglobal": 1750
   },
   {
     "id": "konsol_opornaya_70",
     "price_avf": 2500,
     "price_smart": 2500,
     "price_conpipe": 2500,
-    "price_pamglobal": 2500
+    "price_pamglobal": 1750
   },
   {
     "id": "konsol_opornaya_80",
     "price_avf": 2500,
     "price_smart": 2500,
     "price_conpipe": 2500,
-    "price_pamglobal": 2500
+    "price_pamglobal": 1750
   },
   {
     "id": "kralle_100",
-    "price_pamglobal": 7268.57
+    "price_pamglobal": 5088
   },
   {
     "id": "kralle_125",
-    "price_pamglobal": 9452.33
+    "price_pamglobal": 6616.63
   },
   {
     "id": "kralle_150",
-    "price_pamglobal": 12890.59
+    "price_pamglobal": 9023.41
   },
   {
     "id": "kralle_200",
-    "price_pamglobal": 17446.88
+    "price_pamglobal": 12212.82
   },
   {
     "id": "kralle_250",
-    "price_pamglobal": 22766.89
+    "price_pamglobal": 15936.82
   },
   {
     "id": "kralle_300",
-    "price_pamglobal": 26059.96
+    "price_pamglobal": 18241.97
   },
   {
     "id": "kralle_50",
-    "price_pamglobal": 6583.23
+    "price_pamglobal": 4608.26
   },
   {
     "id": "kralle_80",
-    "price_pamglobal": 7007.21
+    "price_pamglobal": 4905.05
   },
   {
     "id": "krest_100_100(88)",
     "price_smart": 3502.17,
     "price_conpipe": 1245,
-    "price_pamglobal": 9017.25
+    "price_pamglobal": 6312.07
   },
   {
     "id": "krest_100_50(88)",
@@ -165,12 +165,12 @@
   {
     "id": "krest_125_100(88)",
     "price_smart": 5761.98,
-    "price_pamglobal": 9419.73
+    "price_pamglobal": 6593.81
   },
   {
     "id": "krest_150_100(88)",
     "price_smart": 8086.05,
-    "price_pamglobal": 11227.1
+    "price_pamglobal": 7858.97
   },
   {
     "id": "krest_50_50(88)",
@@ -221,132 +221,132 @@
   },
   {
     "id": "otvod_100(15)",
-    "price_pamglobal": 2422.6
+    "price_pamglobal": 1695.82
   },
   {
     "id": "otvod_100(30)",
-    "price_pamglobal": 2422.6
+    "price_pamglobal": 1695.82
   },
   {
     "id": "otvod_100(45)",
     "price_avf": 441.21,
     "price_smart": 963.9,
-    "price_pamglobal": 2422.6
+    "price_pamglobal": 1695.82
   },
   {
     "id": "otvod_100(68)",
-    "price_pamglobal": 3143.99
+    "price_pamglobal": 2200.79
   },
   {
     "id": "otvod_100(88)",
     "price_avf": 579.81,
     "price_smart": 1306.62,
-    "price_pamglobal": 2805.91
+    "price_pamglobal": 1964.14
   },
   {
     "id": "otvod_125(15)",
-    "price_pamglobal": 4005.36
+    "price_pamglobal": 2803.75
   },
   {
     "id": "otvod_125(30)",
-    "price_pamglobal": 4044.13
+    "price_pamglobal": 2830.89
   },
   {
     "id": "otvod_125(45)",
     "price_smart": 1477.98,
-    "price_pamglobal": 4470.5
+    "price_pamglobal": 3129.35
   },
   {
     "id": "otvod_125(68)",
-    "price_pamglobal": 5196.22
+    "price_pamglobal": 3637.35
   },
   {
     "id": "otvod_125(88)",
     "price_smart": 1992.06,
-    "price_pamglobal": 5538.61
+    "price_pamglobal": 3877.03
   },
   {
     "id": "otvod_150(15)",
-    "price_pamglobal": 6038.22
+    "price_pamglobal": 4226.75
   },
   {
     "id": "otvod_150(30)",
-    "price_pamglobal": 6038.22
+    "price_pamglobal": 4226.75
   },
   {
     "id": "otvod_150(45)",
     "price_avf": 965.58,
     "price_smart": 2452.59,
-    "price_pamglobal": 6219.09
+    "price_pamglobal": 4353.36
   },
   {
     "id": "otvod_150(68)",
-    "price_pamglobal": 7213.97
+    "price_pamglobal": 5049.78
   },
   {
     "id": "otvod_150(88)",
     "price_smart": 3309.39,
-    "price_pamglobal": 8299.31
+    "price_pamglobal": 5809.52
   },
   {
     "id": "otvod_200(15)",
-    "price_pamglobal": 9860.54
+    "price_pamglobal": 6902.38
   },
   {
     "id": "otvod_200(30)",
-    "price_pamglobal": 10864.02
+    "price_pamglobal": 7604.81
   },
   {
     "id": "otvod_200(45)",
     "price_smart": 6126.12,
-    "price_pamglobal": 12063.49
+    "price_pamglobal": 8444.44
   },
   {
     "id": "otvod_200(88)",
     "price_smart": 8268.12,
-    "price_pamglobal": 16996.96
+    "price_pamglobal": 11897.87
   },
   {
     "id": "otvod_250(30)",
-    "price_pamglobal": 34870.38
+    "price_pamglobal": 24409.27
   },
   {
     "id": "otvod_250(45)",
     "price_smart": 11320.47,
-    "price_pamglobal": 29034.62
+    "price_pamglobal": 20324.23
   },
   {
     "id": "otvod_300(30)",
-    "price_pamglobal": 53979.88
+    "price_pamglobal": 37785.92
   },
   {
     "id": "otvod_300(45)",
     "price_smart": 15497.37,
-    "price_pamglobal": 52080.55
+    "price_pamglobal": 36456.39
   },
   {
     "id": "otvod_50(15)",
-    "price_pamglobal": 1238.22
+    "price_pamglobal": 866.75
   },
   {
     "id": "otvod_50(30)",
-    "price_pamglobal": 1251.13
+    "price_pamglobal": 875.79
   },
   {
     "id": "otvod_50(45)",
     "price_avf": 143.22,
     "price_smart": 642.6,
-    "price_pamglobal": 1358.8
+    "price_pamglobal": 951.16
   },
   {
     "id": "otvod_50(68)",
-    "price_pamglobal": 1627.98
+    "price_pamglobal": 1139.59
   },
   {
     "id": "otvod_50(88)",
     "price_avf": 200.2,
     "price_smart": 856.8,
-    "price_pamglobal": 1677.53
+    "price_pamglobal": 1174.27
   },
   {
     "id": "otvod_70(45)",
@@ -358,66 +358,66 @@
   },
   {
     "id": "otvod_80(15)",
-    "price_pamglobal": 1798.1
+    "price_pamglobal": 1258.67
   },
   {
     "id": "otvod_80(30)",
-    "price_pamglobal": 1959.6
+    "price_pamglobal": 1371.72
   },
   {
     "id": "otvod_80(45)",
     "price_smart": 867.51,
-    "price_pamglobal": 2198.65
+    "price_pamglobal": 1539.06
   },
   {
     "id": "otvod_80(68)",
-    "price_pamglobal": 2286.93
+    "price_pamglobal": 1600.85
   },
   {
     "id": "otvod_80(88)",
     "price_smart": 1167.39,
-    "price_pamglobal": 2355.85
+    "price_pamglobal": 1649.09
   },
   {
     "id": "rapid_100",
     "price_avf": 152.46,
     "price_smart": 449.82,
     "price_conpipe": 239.46,
-    "price_pamglobal": 877
+    "price_pamglobal": 613.9
   },
   {
     "id": "rapid_125",
     "price_smart": 803.25,
     "price_conpipe": 499,
-    "price_pamglobal": 1460.69
+    "price_pamglobal": 1022.48
   },
   {
     "id": "rapid_150",
     "price_avf": 279.51,
     "price_smart": 1028.16,
     "price_conpipe": 517.5,
-    "price_pamglobal": 1695.91
+    "price_pamglobal": 1187.14
   },
   {
     "id": "rapid_200",
     "price_smart": 1413.72,
     "price_conpipe": 880,
-    "price_pamglobal": 3025.91
+    "price_pamglobal": 2118.14
   },
   {
     "id": "rapid_250",
-    "price_pamglobal": 9098.04
+    "price_pamglobal": 6368.63
   },
   {
     "id": "rapid_300",
-    "price_pamglobal": 9484.27
+    "price_pamglobal": 6638.99
   },
   {
     "id": "rapid_50",
     "price_avf": 113.19,
     "price_smart": 364.14,
     "price_conpipe": 208.98,
-    "price_pamglobal": 737.6
+    "price_pamglobal": 516.32
   },
   {
     "id": "rapid_70",
@@ -428,18 +428,18 @@
     "id": "rapid_80",
     "price_smart": 406.98,
     "price_conpipe": 229,
-    "price_pamglobal": 804.38
+    "price_pamglobal": 563.07
   },
   {
     "id": "rev_100",
     "price_avf": 1656.27,
     "price_smart": 5258.61,
     "price_conpipe": 2977,
-    "price_pamglobal": 5155.3
+    "price_pamglobal": 3608.71
   },
   {
     "id": "rev_100_krug",
-    "price_pamglobal": 7364.71
+    "price_pamglobal": 5155.3
   },
   {
     "id": "rev_125",
@@ -474,22 +474,22 @@
     "price_avf": 690.12,
     "price_smart": 3073.77,
     "price_conpipe": 1528.44,
-    "price_pamglobal": 5187.6
+    "price_pamglobal": 3631.32
   },
   {
     "id": "troynik_100_100(88)",
-    "price_pamglobal": 4672.93
+    "price_pamglobal": 3271.05
   },
   {
     "id": "troynik_100_50(45)",
     "price_avf": 1158.08,
     "price_smart": 2356.2,
     "price_conpipe": 938.9,
-    "price_pamglobal": 5172.53
+    "price_pamglobal": 3620.77
   },
   {
     "id": "troynik_100_50(88)",
-    "price_pamglobal": 4647.09
+    "price_pamglobal": 3252.96
   },
   {
     "id": "troynik_100_70(45)",
@@ -500,36 +500,36 @@
     "id": "troynik_100_80(45)",
     "price_smart": 2409.75,
     "price_conpipe": 1173.62,
-    "price_pamglobal": 5194.05
+    "price_pamglobal": 3635.84
   },
   {
     "id": "troynik_100_80(88)",
-    "price_pamglobal": 4672.93
+    "price_pamglobal": 3271.05
   },
   {
     "id": "troynik_125_100(45)",
     "price_smart": 3448.62,
     "price_conpipe": 2198.48,
-    "price_pamglobal": 9578.44
+    "price_pamglobal": 6704.91
   },
   {
     "id": "troynik_125_100(88)",
-    "price_pamglobal": 8708.45
+    "price_pamglobal": 6095.91
   },
   {
     "id": "troynik_125_125(45)",
     "price_smart": 4069.8,
     "price_conpipe": 2586.45,
-    "price_pamglobal": 9636.57
+    "price_pamglobal": 6745.6
   },
   {
     "id": "troynik_125_50(45)",
     "price_smart": 2527.56,
-    "price_pamglobal": 9528.9
+    "price_pamglobal": 6670.23
   },
   {
     "id": "troynik_125_50(88)",
-    "price_pamglobal": 6481.79
+    "price_pamglobal": 4537.25
   },
   {
     "id": "troynik_125_70(45)",
@@ -539,47 +539,47 @@
     "id": "troynik_125_80(45)",
     "price_smart": 3255.84,
     "price_conpipe": 2299.34,
-    "price_pamglobal": 9363.1
+    "price_pamglobal": 6554.17
   },
   {
     "id": "troynik_125_80(88)",
-    "price_pamglobal": 8021.5
+    "price_pamglobal": 5615.05
   },
   {
     "id": "troynik_150_100(45)",
     "price_avf": 1873.41,
     "price_smart": 4712.4,
     "price_conpipe": 2623.75,
-    "price_pamglobal": 13706.56
+    "price_pamglobal": 9594.59
   },
   {
     "id": "troynik_150_100(88)",
-    "price_pamglobal": 12963.61
+    "price_pamglobal": 9074.53
   },
   {
     "id": "troynik_150_125(45)",
     "price_smart": 5965.47,
     "price_conpipe": 3208.19,
-    "price_pamglobal": 13368.46
+    "price_pamglobal": 9357.92
   },
   {
     "id": "troynik_150_125(88)",
-    "price_pamglobal": 14522.7
+    "price_pamglobal": 10165.89
   },
   {
     "id": "troynik_150_150(45)",
     "price_avf": 2534.07,
     "price_smart": 7497,
     "price_conpipe": 3767.78,
-    "price_pamglobal": 13964.94
+    "price_pamglobal": 9775.46
   },
   {
     "id": "troynik_150_150(88)",
-    "price_pamglobal": 16622.29
+    "price_pamglobal": 11635.6
   },
   {
     "id": "troynik_150_50(88)",
-    "price_pamglobal": 13163.89
+    "price_pamglobal": 9214.72
   },
   {
     "id": "troynik_150_70(45)",
@@ -589,24 +589,24 @@
     "id": "troynik_150_80(45)",
     "price_smart": 4669.56,
     "price_conpipe": 3511.6,
-    "price_pamglobal": 13351.23
+    "price_pamglobal": 9345.86
   },
   {
     "id": "troynik_150_80(88)",
-    "price_pamglobal": 13943.42
+    "price_pamglobal": 9760.39
   },
   {
     "id": "troynik_200_100(45)",
     "price_smart": 9082.08,
-    "price_pamglobal": 33154.12
+    "price_pamglobal": 23207.88
   },
   {
     "id": "troynik_200_100(88)",
-    "price_pamglobal": 31603.64
+    "price_pamglobal": 22122.55
   },
   {
     "id": "troynik_200_125(45)",
-    "price_pamglobal": 32376.72
+    "price_pamglobal": 22663.7
   },
   {
     "id": "troynik_200_150(45)",
@@ -617,15 +617,15 @@
     "id": "troynik_200_200(45)",
     "price_smart": 12038.04,
     "price_conpipe": 10693.65,
-    "price_pamglobal": 33283.31
+    "price_pamglobal": 23298.32
   },
   {
     "id": "troynik_200_80(45)",
-    "price_pamglobal": 32363.82
+    "price_pamglobal": 22654.67
   },
   {
     "id": "troynik_250_100(45)",
-    "price_pamglobal": 69835.54
+    "price_pamglobal": 48884.88
   },
   {
     "id": "troynik_250_150(45)",
@@ -655,11 +655,11 @@
     "id": "troynik_50_50(45)",
     "price_avf": 399.63,
     "price_smart": 1274.49,
-    "price_pamglobal": 2883.44
+    "price_pamglobal": 2018.41
   },
   {
     "id": "troynik_50_50(88)",
-    "price_pamglobal": 2745.62
+    "price_pamglobal": 1921.93
   },
   {
     "id": "troynik_70_50(45)",
@@ -672,63 +672,63 @@
   {
     "id": "troynik_80_50(45)",
     "price_smart": 1735.02,
-    "price_pamglobal": 4825.82
+    "price_pamglobal": 3378.07
   },
   {
     "id": "troynik_80_50(88)",
-    "price_pamglobal": 3507.94
+    "price_pamglobal": 2455.56
   },
   {
     "id": "troynik_80_80(45)",
     "price_smart": 1799.28,
-    "price_pamglobal": 4849.52
+    "price_pamglobal": 3394.66
   },
   {
     "id": "troynik_80_80(88)",
-    "price_pamglobal": 4026.9
+    "price_pamglobal": 2818.83
   },
   {
     "id": "truba_100",
     "price_avf": 4139.52,
     "price_smart": 8503.74,
     "price_conpipe": 5511.74,
-    "price_pamglobal": 19393.12
+    "price_pamglobal": 13575.18
   },
   {
     "id": "truba_125",
     "price_smart": 11641.77,
     "price_conpipe": 7739.53,
-    "price_pamglobal": 25407.93
+    "price_pamglobal": 17785.55
   },
   {
     "id": "truba_150",
     "price_avf": 7242.45,
     "price_smart": 14083.65,
     "price_conpipe": 9359.7,
-    "price_pamglobal": 34548.31
+    "price_pamglobal": 24183.82
   },
   {
     "id": "truba_200",
     "price_smart": 22576.68,
     "price_conpipe": 17329.94,
-    "price_pamglobal": 64941.89
+    "price_pamglobal": 45459.32
   },
   {
     "id": "truba_250",
     "price_smart": 32686.92,
-    "price_pamglobal": 84811.84
+    "price_pamglobal": 59368.29
   },
   {
     "id": "truba_300",
     "price_smart": 46856.25,
-    "price_pamglobal": 104441.84
+    "price_pamglobal": 73109.29
   },
   {
     "id": "truba_50",
     "price_avf": 2254.56,
     "price_smart": 4498.2,
     "price_conpipe": 3100,
-    "price_pamglobal": 12907.63
+    "price_pamglobal": 9035.34
   },
   {
     "id": "truba_70",
@@ -739,56 +739,56 @@
     "id": "truba_80",
     "price_smart": 6618.78,
     "price_conpipe": 4732.58,
-    "price_pamglobal": 15721.07
+    "price_pamglobal": 11004.75
   },
   {
     "id": "tsanga_m12",
     "price_avf": 50,
     "price_smart": 50,
     "price_conpipe": 50,
-    "price_pamglobal": 50
+    "price_pamglobal": 35
   },
   {
     "id": "zaglushka_100",
     "price_avf": 137.83,
     "price_smart": 720,
     "price_conpipe": 298.43,
-    "price_pamglobal": 1213.46
+    "price_pamglobal": 849.42
   },
   {
     "id": "zaglushka_125",
     "price_smart": 1130,
     "price_conpipe": 652.83,
-    "price_pamglobal": 1843.56
+    "price_pamglobal": 1290.49
   },
   {
     "id": "zaglushka_150",
     "price_avf": 469.7,
     "price_smart": 1470,
     "price_conpipe": 1094.27,
-    "price_pamglobal": 2484.2
+    "price_pamglobal": 1738.94
   },
   {
     "id": "zaglushka_200",
     "price_smart": 1890,
     "price_conpipe": 1944.85,
-    "price_pamglobal": 5720.57
+    "price_pamglobal": 4004.4
   },
   {
     "id": "zaglushka_250",
     "price_smart": 3430,
-    "price_pamglobal": 6881.27
+    "price_pamglobal": 4816.89
   },
   {
     "id": "zaglushka_300",
     "price_smart": 5470,
-    "price_pamglobal": 9220.74
+    "price_pamglobal": 6454.52
   },
   {
     "id": "zaglushka_50",
     "price_avf": 57.75,
     "price_smart": 360,
-    "price_pamglobal": 607.48
+    "price_pamglobal": 425.24
   },
   {
     "id": "zaglushka_70",
@@ -798,6 +798,6 @@
     "id": "zaglushka_80",
     "price_smart": 560,
     "price_conpipe": 263.47,
-    "price_pamglobal": 1055.18
+    "price_pamglobal": 738.63
   }
 ]
