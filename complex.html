@@ -710,6 +710,7 @@ function renderCalcK1() {
         <th>Ед.</th>
         <th>ДН</th>
         <th>Цена</th>
+        <th>Цена со скид.</th>
         ${buildings.map(b => {
             const exp = !!dnBldExpanded[b.id];
             return `<th>К${b.name} <span class="dn-toggle${exp?' active':''}" onclick="toggleBldDn(${b.id})" title="Индивидуальный ДН">⚙</span></th>`;
@@ -778,18 +779,17 @@ function renderCalcK1() {
         grandTotal += totalCost;
 
         // Цена за единицу (по основному ДН)
-        let unitPrice = 0;
+        let basePrice = 0;
+        let discountedPrice = 0;
         {
             let pid = row.priceId || '';
             if (hasDn && row.priceKey) pid = row.priceKey(mainDn);
-            unitPrice = getPrice(pid, selectedBrand);
-            if (selectedBrand === 'Smart' && row.smartDiscount) unitPrice = +(unitPrice * (1 - row.smartDiscount)).toFixed(2);
-            if (row.pricePer && unitPrice) unitPrice = +(unitPrice / row.pricePer).toFixed(2);
+            basePrice = getPrice(pid, selectedBrand);
+            if (row.pricePer && basePrice) basePrice = +(basePrice / row.pricePer).toFixed(2);
+            if (selectedBrand === 'Smart' && row.smartDiscount) {
+                discountedPrice = +(basePrice * (1 - row.smartDiscount)).toFixed(2);
+            }
         }
-
-        const discountBadge = (selectedBrand === 'Smart' && row.smartDiscount)
-            ? ` <span style="color:#f59e0b;font-size:0.65rem;font-weight:600">−${(row.smartDiscount*100).toFixed(0)}%</span>`
-            : '';
 
         const brandLabel = row.brand ? selectedBrand : '';
         const nameText = brandLabel
@@ -801,7 +801,8 @@ function renderCalcK1() {
             <td style="text-align:left;white-space:normal;max-width:200px">${nameText}</td>
             <td class="unit-cell">${row.unit}</td>
             ${hasDn ? dnCell : '<td></td>'}
-            <td style="color:#94a3b8;font-size:0.75rem">${unitPrice ? unitPrice.toLocaleString('ru-RU') + ' ₽' + discountBadge : '—'}</td>
+            <td style="color:#94a3b8;font-size:0.75rem">${basePrice ? basePrice.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+            <td style="color:#f59e0b;font-size:0.75rem;font-weight:600">${discountedPrice ? discountedPrice.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
             ${cells}
             <td class="total-cell">${fmt(totalQty)}</td>
             <td style="color:#10b981;font-weight:600">${totalCost ? totalCost.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
@@ -810,7 +811,7 @@ function renderCalcK1() {
 
     // Итого стоимость
     body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
-        <td colspan="${5 + buildings.length + 1}"></td>
+        <td colspan="${6 + buildings.length + 1}"></td>
         <td style="font-weight:700;color:#10b981">${grandTotal ? grandTotal.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
     </tr>`;
 }
