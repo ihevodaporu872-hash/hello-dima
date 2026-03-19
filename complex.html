@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Расчёт инженерных систем — Жилой комплекс</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -501,9 +502,57 @@
                 <input type="text" id="price-search" placeholder="Поиск по названию или ID..." oninput="renderPriceTable()"
                     style="flex:1;min-width:200px;padding:8px 12px;background:#0f1117;border:1px solid #2a2d3a;border-radius:6px;color:#e0e0e0;font-size:0.85rem;font-family:inherit">
                 <button class="btn" onclick="document.getElementById('import-file').click()">Импорт прайс-листа</button>
-                <input type="file" id="import-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="importPriceList(this)">
+                <input type="file" id="import-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="onFileSelected(this)">
             </div>
             <div id="import-status" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:8px;font-size:0.82rem"></div>
+
+            <!-- Панель маппинга колонок -->
+            <div id="import-panel" style="display:none;margin-bottom:16px;background:#1a1d2e;border:1px solid #2a2d3a;border-radius:10px;padding:20px">
+                <div style="font-size:0.85rem;font-weight:600;color:#3b82f6;margin-bottom:12px">Настройка импорта</div>
+                <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+                    <div class="form-group-inline" style="margin-bottom:0">
+                        <label>Бренд (куда записать цены)</label>
+                        <select id="import-brand">
+                            <option value="price_avf">AVF</option>
+                            <option value="price_smart">Smart</option>
+                            <option value="price_conpipe">Con-Pipe</option>
+                            <option value="price_pamglobal">Pam-Global</option>
+                            <option value="price_halifax">Halifax</option>
+                            <option value="price_kontur">Контур-Уют</option>
+                            <option value="price_rosturplast">РосТурПласт</option>
+                            <option value="price_ostendorf">Ostendorf</option>
+                            <option value="price_proaqua">Pro Aqua</option>
+                            <option value="price_rehau">Rehau</option>
+                            <option value="price_sinikon">Синикон</option>
+                            <option value="price_uponor">Uponor</option>
+                            <option value="price_valfex">Valfex</option>
+                        </select>
+                    </div>
+                    <div class="form-group-inline" style="margin-bottom:0">
+                        <label>Колонка — Артикул / ID</label>
+                        <select id="import-col-id"></select>
+                    </div>
+                    <div class="form-group-inline" style="margin-bottom:0">
+                        <label>Колонка — Цена</label>
+                        <select id="import-col-price"></select>
+                    </div>
+                    <div class="form-group-inline" style="margin-bottom:0">
+                        <label>Колонка — Название (необяз.)</label>
+                        <select id="import-col-name"><option value="">— не выбрано —</option></select>
+                    </div>
+                </div>
+                <div style="font-size:0.78rem;color:#6b7280;margin-bottom:12px">Предпросмотр (первые 5 строк):</div>
+                <div class="table-scroll" style="margin-bottom:16px">
+                    <table class="data-table" id="import-preview">
+                        <thead id="import-preview-head"></thead>
+                        <tbody id="import-preview-body"></tbody>
+                    </table>
+                </div>
+                <div style="display:flex;gap:8px">
+                    <button class="btn" onclick="runImport()">Загрузить в базу</button>
+                    <button class="btn btn-outline" onclick="cancelImport()">Отмена</button>
+                </div>
+            </div>
             <div class="table-scroll">
                 <table class="data-table" id="price-table">
                     <thead id="price-head"></thead>
@@ -1122,6 +1171,9 @@ function renderPriceTable() {
 }
 
 // === Импорт прайс-листа ===
+let importRows = []; // временные данные из файла
+let importHeaders = [];
+
 function showImportStatus(msg, isError) {
     const el = document.getElementById('import-status');
     el.style.display = '';
@@ -1132,81 +1184,139 @@ function showImportStatus(msg, isError) {
     if (!isError) setTimeout(() => { el.style.display = 'none'; }, 5000);
 }
 
-function parseCSV(text) {
-    const lines = text.split(/\r?\n/).filter(l => l.trim());
-    if (lines.length < 2) return [];
-    // Разделитель: ; или ,
-    const sep = lines[0].includes(';') ? ';' : ',';
-    const headers = lines[0].split(sep).map(h => h.trim().replace(/^["']|["']$/g, ''));
-    const rows = [];
-    for (let i = 1; i < lines.length; i++) {
-        const vals = lines[i].split(sep).map(v => v.trim().replace(/^["']|["']$/g, ''));
-        const obj = {};
-        headers.forEach((h, idx) => { obj[h] = vals[idx] || ''; });
-        rows.push(obj);
-    }
-    return rows;
-}
-
-async function importPriceList(input) {
+function onFileSelected(input) {
     const file = input.files[0];
     if (!file) return;
     input.value = '';
 
-    if (!file.name.endsWith('.csv')) {
-        showImportStatus('Поддерживается только CSV формат. Сохраните Excel как CSV.', true);
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const wb = XLSX.read(e.target.result, { type: 'array' });
+            const sheet = wb.Sheets[wb.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+            if (!json.length) {
+                showImportStatus('Файл пустой.', true);
+                return;
+            }
+            importRows = json;
+            importHeaders = Object.keys(json[0]);
+            showImportPanel();
+        } catch(err) {
+            showImportStatus('Ошибка чтения файла: ' + err.message, true);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function showImportPanel() {
+    const panel = document.getElementById('import-panel');
+    panel.style.display = '';
+
+    // Заполняем селекты колонками из файла
+    ['import-col-id', 'import-col-price', 'import-col-name'].forEach(selId => {
+        const sel = document.getElementById(selId);
+        const old = sel.value;
+        sel.innerHTML = selId === 'import-col-name' ? '<option value="">— не выбрано —</option>' : '';
+        importHeaders.forEach(h => {
+            sel.innerHTML += `<option value="${h}">${h}</option>`;
+        });
+        // Авто-подбор колонок
+        if (selId === 'import-col-id') {
+            const guess = importHeaders.find(h => /артикул|article|id|код|code|sku/i.test(h));
+            if (guess) sel.value = guess;
+        }
+        if (selId === 'import-col-price') {
+            const guess = importHeaders.find(h => /цена|price|стоимость|прайс|руб/i.test(h));
+            if (guess) sel.value = guess;
+        }
+        if (selId === 'import-col-name') {
+            const guess = importHeaders.find(h => /наименование|название|name|товар/i.test(h));
+            if (guess) sel.value = guess;
+        }
+    });
+
+    renderImportPreview();
+
+    // Обновлять превью при смене колонок
+    document.getElementById('import-col-id').onchange = renderImportPreview;
+    document.getElementById('import-col-price').onchange = renderImportPreview;
+    document.getElementById('import-col-name').onchange = renderImportPreview;
+}
+
+function renderImportPreview() {
+    const colId = document.getElementById('import-col-id').value;
+    const colPrice = document.getElementById('import-col-price').value;
+    const colName = document.getElementById('import-col-name').value;
+    const brand = document.getElementById('import-brand');
+    const brandLabel = brand.options[brand.selectedIndex].text;
+
+    const head = document.getElementById('import-preview-head');
+    const body = document.getElementById('import-preview-body');
+
+    head.innerHTML = `<tr>
+        <th style="text-align:left">Артикул (${colId || '?'})</th>
+        ${colName ? `<th style="text-align:left">Название (${colName})</th>` : ''}
+        <th>Цена → ${brandLabel} (${colPrice || '?'})</th>
+    </tr>`;
+
+    const preview = importRows.slice(0, 5);
+    body.innerHTML = preview.map(r => {
+        const price = parseFloat(String(r[colPrice]).replace(/\s/g, '').replace(',', '.'));
+        return `<tr>
+            <td style="text-align:left">${r[colId] || '—'}</td>
+            ${colName ? `<td style="text-align:left">${r[colName] || '—'}</td>` : ''}
+            <td style="color:#10b981">${isNaN(price) ? '—' : price.toLocaleString('ru-RU') + ' ₽'}</td>
+        </tr>`;
+    }).join('');
+}
+
+function cancelImport() {
+    document.getElementById('import-panel').style.display = 'none';
+    importRows = [];
+    importHeaders = [];
+}
+
+async function runImport() {
+    const colId = document.getElementById('import-col-id').value;
+    const colPrice = document.getElementById('import-col-price').value;
+    const colName = document.getElementById('import-col-name').value;
+    const brandCol = document.getElementById('import-brand').value;
+
+    if (!colId || !colPrice) {
+        showImportStatus('Выберите колонки артикула и цены.', true);
         return;
     }
 
-    try {
-        const text = await file.text();
-        const rows = parseCSV(text);
-        if (!rows.length) {
-            showImportStatus('Файл пустой или неверный формат.', true);
-            return;
+    showImportStatus(`Импорт ${importRows.length} строк...`, false);
+
+    let updated = 0, inserted = 0, skipped = 0, errors = 0;
+
+    for (const row of importRows) {
+        const id = String(row[colId] || '').trim();
+        if (!id) { skipped++; continue; }
+
+        const priceRaw = String(row[colPrice] || '').replace(/\s/g, '').replace(',', '.');
+        const price = parseFloat(priceRaw);
+        if (isNaN(price)) { skipped++; continue; }
+
+        const record = { id };
+        record[brandCol] = price;
+        if (colName && row[colName]) record.Name = String(row[colName]).trim();
+
+        const { error } = await sb.from('Master Catalog').upsert(record, { onConflict: 'id' });
+        if (error) {
+            console.error('Ошибка:', id, error);
+            errors++;
+        } else {
+            if (pricesData[id]) updated++; else inserted++;
         }
-
-        // Проверяем что есть колонка id
-        if (!rows[0].hasOwnProperty('id')) {
-            showImportStatus('В CSV нет колонки "id". Нужны колонки: id, Name, DN, price_smart, ...', true);
-            return;
-        }
-
-        showImportStatus(`Импорт ${rows.length} строк...`, false);
-
-        let updated = 0;
-        let inserted = 0;
-        let errors = 0;
-
-        for (const row of rows) {
-            if (!row.id) continue;
-            // Преобразуем числовые поля
-            const record = { id: row.id };
-            if (row.Name !== undefined) record.Name = row.Name;
-            if (row.DN !== undefined) record.DN = row.DN;
-            for (const key of Object.keys(row)) {
-                if (key.startsWith('price_')) {
-                    const num = parseFloat(row[key]);
-                    record[key] = isNaN(num) ? null : num;
-                }
-            }
-
-            const { error } = await sb.from('Master Catalog').upsert(record, { onConflict: 'id' });
-            if (error) {
-                console.error('Ошибка импорта строки', row.id, error);
-                errors++;
-            } else {
-                if (pricesData[row.id]) updated++; else inserted++;
-            }
-        }
-
-        await loadPrices();
-        renderPriceTable();
-        showImportStatus(`Готово! Добавлено: ${inserted}, обновлено: ${updated}${errors ? ', ошибок: ' + errors : ''}`, errors > 0);
-    } catch(e) {
-        console.error('Ошибка импорта:', e);
-        showImportStatus('Ошибка чтения файла: ' + e.message, true);
     }
+
+    await loadPrices();
+    renderPriceTable();
+    cancelImport();
+    showImportStatus(`Готово! Добавлено: ${inserted}, обновлено: ${updated}, пропущено: ${skipped}${errors ? ', ошибок: ' + errors : ''}`, errors > 0);
 }
 
 // === Инициализация ===
