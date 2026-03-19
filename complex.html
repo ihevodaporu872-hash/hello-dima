@@ -499,12 +499,8 @@
         <div class="card">
             <div class="card-title">Прайс-лист — Master Catalog</div>
             <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
-                <input type="text" id="price-search" placeholder="Наименование..." oninput="renderPriceTable()"
-                    style="flex:1;min-width:180px;padding:8px 12px;background:#0f1117;border:1px solid #2a2d3a;border-radius:6px;color:#e0e0e0;font-size:0.85rem;font-family:inherit">
-                <select id="price-filter-dn" onchange="renderPriceTable()"
-                    style="padding:8px 10px;background:#0f1117;border:1px solid #2a2d3a;border-radius:6px;color:#e0e0e0;font-size:0.85rem;font-family:inherit">
-                    <option value="">Все ДН</option>
-                </select>
+                <input type="text" id="price-search" placeholder="Поиск по названию или ID..." oninput="renderPriceTable()"
+                    style="flex:1;min-width:200px;padding:8px 12px;background:#0f1117;border:1px solid #2a2d3a;border-radius:6px;color:#e0e0e0;font-size:0.85rem;font-family:inherit">
                 <button class="btn" onclick="document.getElementById('import-file').click()">Импорт прайс-листа</button>
                 <input type="file" id="import-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="onFileSelected(this)">
             </div>
@@ -1135,23 +1131,11 @@ function renderPriceTable() {
     const head = document.getElementById('price-head');
     const body = document.getElementById('price-body');
     const search = (document.getElementById('price-search').value || '').toLowerCase();
-    const dnFilter = document.getElementById('price-filter-dn').value;
 
     const allRows = Object.values(pricesData);
     if (!allRows.length) {
         body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#6b7280;padding:24px">Загрузка цен...</td></tr>';
         return;
-    }
-
-    // Заполняем список ДН (один раз или при изменении данных)
-    const dnSel = document.getElementById('price-filter-dn');
-    const allDns = [...new Set(allRows.map(r => r.DN).filter(d => d !== null && d !== undefined && d !== ''))].sort((a, b) => {
-        const na = parseFloat(a), nb = parseFloat(b);
-        if (!isNaN(na) && !isNaN(nb)) return na - nb;
-        return String(a).localeCompare(String(b));
-    });
-    if (dnSel.options.length <= 1) {
-        allDns.forEach(dn => { dnSel.innerHTML += `<option value="${dn}">${dn}</option>`; });
     }
 
     // Определяем колонки с ценами, которые реально есть в данных
@@ -1167,13 +1151,10 @@ function renderPriceTable() {
     </tr>`;
 
     const filtered = allRows.filter(r => {
-        if (search) {
-            const match = (r.id || '').toLowerCase().includes(search) ||
-                          (r.Name || '').toLowerCase().includes(search);
-            if (!match) return false;
-        }
-        if (dnFilter && String(r.DN || '') !== dnFilter) return false;
-        return true;
+        if (!search) return true;
+        return (r.id || '').toLowerCase().includes(search) ||
+               (r.Name || '').toLowerCase().includes(search) ||
+               (r.DN || '').toString().toLowerCase().includes(search);
     });
 
     filtered.sort((a, b) => (a.Name || '').localeCompare(b.Name || '', 'ru'));
