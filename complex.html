@@ -847,6 +847,59 @@ const MAT_K4_V2_PVC = [
     { type:'мат', name:'Муфта противопожарная "ОГНЕЗА-ПМ/110"',        unit:'шт', priceId:'mufta_ogneza', calc: b => val('k4',b) * val('floors',b) },
 ];
 
+// === Дренажные подсистемы (К4 доп.) ===
+// qty = количество точек (вводится в заголовке секции)
+const MAT_DRAIN_LIFT = [
+    { type:'раб', name:'Монтаж трапа',                                   unit:'шт', priceId:'montazh_trapa', getQty: () => window._drainLiftQty || 0, calc: b => 0 },
+    { type:'мат', name:'Трап HL310N',                                    unit:'шт', priceId:'trap_hl310n', getQty: () => window._drainLiftQty || 0, calc: b => 0 },
+    { type:'раб', name:'Монтаж трубы',                                   unit:'м',  priceId:'montazh_truby_chug', getQty: () => (window._drainLiftQty || 0) * 3, calc: b => 0 },
+    { type:'мат', name:'Труба чугун SML Ду50 L=3000 мм', brand:'Smart', unit:'м',  priceId:'truba_50', pricePer:3, getQty: () => (window._drainLiftQty || 0) * 3, calc: b => 0 },
+    { type:'мат', name:'Тройник чугун SML',              brand:'Smart', unit:'шт', dnPairs:DN_PAIRS, defaultPair:'100_50', priceKey: p=>`troynik_${p}(45)`, getQty: () => window._drainLiftQty || 0, calc: b => 0 },
+];
+
+const MAT_DRAIN_COLLECTOR = [
+    { type:'раб', name:'Монтаж трапа',                                   unit:'шт', priceId:'montazh_trapa', getQty: () => window._drainCollQty || 0, calc: b => 0 },
+    { type:'мат', name:'Трап HL310N',                                    unit:'шт', priceId:'trap_hl310n', getQty: () => window._drainCollQty || 0, calc: b => 0 },
+    { type:'раб', name:'Монтаж трубы',                                   unit:'м',  priceId:'montazh_truby_chug', getQty: () => (window._drainCollQty || 0) * 2, calc: b => 0 },
+    { type:'мат', name:'Труба чугун SML Ду50 L=3000 мм', brand:'Smart', unit:'м',  priceId:'truba_50', pricePer:3, getQty: () => (window._drainCollQty || 0) * 2, calc: b => 0 },
+    { type:'мат', name:'Тройник чугун SML',              brand:'Smart', unit:'шт', dnPairs:DN_PAIRS, defaultPair:'100_50', priceKey: p=>`troynik_${p}(45)`, getQty: () => window._drainCollQty || 0, calc: b => 0 },
+];
+
+const MAT_DRAIN_MOP = [
+    { type:'раб', name:'Монтаж трапа',                                   unit:'шт', priceId:'montazh_trapa', getQty: () => window._drainMopQty || 0, calc: b => 0 },
+    { type:'мат', name:'Трап HL310N',                                    unit:'шт', priceId:'trap_hl310n', getQty: () => window._drainMopQty || 0, calc: b => 0 },
+    { type:'раб', name:'Монтаж трубы',                                   unit:'м',  priceId:'montazh_truby_chug', getQty: () => (window._drainMopQty || 0) * 2, calc: b => 0 },
+    { type:'мат', name:'Труба чугун SML Ду50 L=3000 мм', brand:'Smart', unit:'м',  priceId:'truba_50', pricePer:3, getQty: () => (window._drainMopQty || 0) * 2, calc: b => 0 },
+    { type:'мат', name:'Тройник чугун SML',              brand:'Smart', unit:'шт', dnPairs:DN_PAIRS, defaultPair:'100_50', priceKey: p=>`troynik_${p}(45)`, getQty: () => window._drainMopQty || 0, calc: b => 0 },
+];
+
+const DRAIN_STORAGE_KEY = 'complex_drain';
+
+function loadDrainSettings() {
+    try {
+        const raw = localStorage.getItem(DRAIN_STORAGE_KEY);
+        if (!raw) return;
+        const d = JSON.parse(raw);
+        window._drainLiftEnabled = d.liftEnabled !== false;
+        window._drainLiftQty = d.liftQty || 0;
+        window._drainCollEnabled = d.collEnabled !== false;
+        window._drainCollQty = d.collQty || 0;
+        window._drainMopEnabled = d.mopEnabled !== false;
+        window._drainMopQty = d.mopQty || 0;
+    } catch(e) {}
+}
+
+function saveDrainSettings() {
+    localStorage.setItem(DRAIN_STORAGE_KEY, JSON.stringify({
+        liftEnabled: window._drainLiftEnabled !== false,
+        liftQty: window._drainLiftQty || 0,
+        collEnabled: window._drainCollEnabled !== false,
+        collQty: window._drainCollQty || 0,
+        mopEnabled: window._drainMopEnabled !== false,
+        mopQty: window._drainMopQty || 0,
+    }));
+}
+
 // === Сохранение в localStorage ===
 const STORAGE_KEY = 'complex_data';
 
@@ -949,6 +1002,9 @@ function recalculate() {
 
     // Расчёт К4
     renderCalcK4();
+
+    // Дренажные подсекции
+    renderDrainSections();
 }
 
 function onMaterialChange() {
@@ -1406,18 +1462,12 @@ function renderCalcK4() {
     </tr>`;
 
     if (!k4enabled) {
-        // Пустой итого К4 + общий итого
         body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
             <td colspan="2" style="text-align:left;font-weight:700;color:#94a3b8;font-size:0.75rem">Итого К4</td>
             <td colspan="${4 + buildings.length}"></td>
             <td style="font-weight:700;color:#6b7280">—</td>
         </tr>`;
-        const total = (window._k1Total || 0) + (window._k11Total || 0) + (window._k2Total || 0);
-        body.innerHTML += `<tr style="border-top:3px solid #3b82f6;background:rgba(59,130,246,0.08)">
-            <td colspan="2" style="text-align:left;font-weight:700;color:#e0e0e0;font-size:0.85rem">ОБЩИЙ ИТОГО</td>
-            <td colspan="${4 + buildings.length}"></td>
-            <td style="font-weight:700;color:#10b981;font-size:0.95rem">${total ? total.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
-        </tr>`;
+        window._k4Total = 0;
         return;
     }
 
@@ -1508,8 +1558,102 @@ function renderCalcK4() {
         <td style="font-weight:700;color:#10b981">${grandTotal ? grandTotal.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
     </tr>`;
 
+    window._k4Total = grandTotal;
+}
+
+// === Дренажные подсекции ===
+function renderDrainSection(label, rows, enabledKey, qtyKey, sectionId) {
+    const body = document.getElementById('calc-k1-body');
+    const enabled = window[enabledKey] !== false;
+    const qty = window[qtyKey] || 0;
+    const selStyle = 'padding:3px 6px;background:#0f1117;border:1px solid #334155;border-radius:4px;color:#e0e0e0;font-size:0.72rem;font-family:inherit;';
+    const inputStyle = 'width:50px;padding:3px 6px;background:#0f1117;border:1px solid #334155;border-radius:4px;color:#e0e0e0;font-size:0.72rem;text-align:center;font-family:inherit;';
+
+    body.innerHTML += `<tr class="section-row">
+        <td colspan="${7 + buildings.length}" style="padding:8px 6px">
+            <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px" onclick="event.stopPropagation()">
+                <input type="checkbox" ${enabled ? 'checked' : ''} onchange="window['${enabledKey}']=this.checked;saveDrainSettings();recalculate()" style="accent-color:#3b82f6;width:16px;height:16px">
+                ${label}
+            </label> &nbsp;
+            Кол-во: <input type="number" value="${qty}" min="0" step="1" style="${inputStyle}"
+                onchange="window['${qtyKey}']=parseFloat(this.value)||0;saveDrainSettings();recalculate()"
+                onclick="event.stopPropagation()">
+        </td>
+    </tr>`;
+
+    if (!enabled || !qty) return 0;
+
+    const selectedBrand = document.getElementById('brand-iron').value || 'Smart';
+
+    let grandTotal = 0;
+    body.innerHTML += rows.map((row, i) => {
+        const isRab = row.type === 'раб';
+        const hasDn = !!(row.dns || row.dnPairs);
+        const isPair = !!row.dnPairs;
+        const defVal = isPair ? row.defaultPair : row.defaultDn;
+        const mainKey = sectionId + '_main_' + i;
+        const mainDn = hasDn ? (selectedDns[mainKey] ?? defVal) : null;
+
+        let dnCell = '<td></td>';
+        if (hasDn && !isRab) {
+            const opts = isPair ? row.dnPairs : row.dns;
+            dnCell = `<td><select class="dn-select${isPair?' dn-select-pair':''}" onchange="onDnMain('${sectionId}',${i},this.value)">` +
+                opts.map(o => {
+                    const label2 = isPair ? o.replace('_','×') : o;
+                    return `<option value="${o}"${o==mainDn?' selected':''}>${label2}</option>`;
+                }).join('') + `</select></td>`;
+        }
+
+        const totalQty = row.getQty();
+
+        let priceId = row.priceId || '';
+        if (hasDn && row.priceKey) priceId = row.priceKey(mainDn);
+        let price = getPrice(priceId, selectedBrand);
+        if (row.pricePer && price) price = +(price / row.pricePer).toFixed(2);
+        const totalCost = +(price * totalQty).toFixed(2);
+        grandTotal += totalCost;
+
+        const brandLabel = row.brand ? selectedBrand : '';
+        const nameText = brandLabel
+            ? `${row.name} <span style="color:#6b7280;font-size:0.68rem">${brandLabel}</span>`
+            : row.name;
+
+        // Для дренажных — одна колонка "Итого" без разбивки по корпусам
+        const emptyCells = buildings.map(() => '<td>—</td>').join('');
+
+        return `<tr class="${isRab ? 'row-rab' : 'row-mat'}">
+            <td class="type-cell">${row.type}</td>
+            <td style="text-align:left;white-space:normal;max-width:200px">${nameText}</td>
+            <td class="unit-cell">${row.unit}</td>
+            ${hasDn ? dnCell : '<td></td>'}
+            <td style="color:#94a3b8;font-size:0.75rem">${price ? price.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+            ${emptyCells}
+            <td class="total-cell">${fmt(totalQty)}</td>
+            <td style="color:#10b981;font-weight:600">${totalCost ? totalCost.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+        </tr>`;
+    }).join('');
+
+    return grandTotal;
+}
+
+function renderDrainSections() {
+    const t1 = renderDrainSection('Дренаж лифтовых холлов', MAT_DRAIN_LIFT, '_drainLiftEnabled', '_drainLiftQty', 'drain_lift');
+    const t2 = renderDrainSection('Дренаж от коллекторов', MAT_DRAIN_COLLECTOR, '_drainCollEnabled', '_drainCollQty', 'drain_coll');
+    const t3 = renderDrainSection('Дренаж МОП', MAT_DRAIN_MOP, '_drainMopEnabled', '_drainMopQty', 'drain_mop');
+
+    const drainTotal = (t1 || 0) + (t2 || 0) + (t3 || 0);
+    const body = document.getElementById('calc-k1-body');
+
+    if (drainTotal) {
+        body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
+            <td colspan="2" style="text-align:left;font-weight:700;color:#94a3b8;font-size:0.75rem">Итого дренаж</td>
+            <td colspan="${4 + buildings.length}"></td>
+            <td style="font-weight:700;color:#10b981">${drainTotal.toLocaleString('ru-RU') + ' ₽'}</td>
+        </tr>`;
+    }
+
     // Общий итого
-    const total = (window._k1Total || 0) + (window._k11Total || 0) + (window._k2Total || 0) + grandTotal;
+    const total = (window._k1Total || 0) + (window._k11Total || 0) + (window._k2Total || 0) + (window._k4Total || 0) + drainTotal;
     body.innerHTML += `<tr style="border-top:3px solid #3b82f6;background:rgba(59,130,246,0.08)">
         <td colspan="2" style="text-align:left;font-weight:700;color:#e0e0e0;font-size:0.85rem">ОБЩИЙ ИТОГО</td>
         <td colspan="${4 + buildings.length}"></td>
@@ -1955,6 +2099,7 @@ async function runImport() {
 
 // === Инициализация ===
 loadData();
+loadDrainSettings();
 render();
 loadPrices();
 
