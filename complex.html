@@ -1315,10 +1315,13 @@ function toggleFilter(e, col) {
 
     dd.innerHTML = `
         <input type="text" class="filter-search" placeholder="Поиск..." oninput="filterSearchDD(this, '${col}')" onclick="event.stopPropagation()">
+        <label style="padding:3px 8px;border-bottom:1px solid #2a2d3a;margin-bottom:2px;font-weight:600;color:#3b82f6" onclick="event.stopPropagation()">
+            <input type="checkbox" id="filter-all-${col}" onchange="toggleAllFilter('${col}', this.checked)" checked> Выбрать все
+        </label>
         <div class="filter-list" id="filter-list-${col}">
             ${values.map(v => {
                 const checked = !currentFilter || currentFilter.has(v) ? 'checked' : '';
-                return `<label onclick="event.stopPropagation()"><input type="checkbox" value="${v.replace(/"/g,'&quot;')}" ${checked}> ${v}</label>`;
+                return `<label onclick="event.stopPropagation()"><input type="checkbox" value="${v.replace(/"/g,'&quot;')}" ${checked} onchange="updateSelectAll('${col}')"> ${v}</label>`;
             }).join('')}
         </div>
         <div class="filter-actions" onclick="event.stopPropagation()">
@@ -1330,6 +1333,19 @@ function toggleFilter(e, col) {
     dd.classList.add('open');
     openFilterCol = col;
     dd.querySelector('.filter-search').focus();
+}
+
+function toggleAllFilter(col, checked) {
+    const list = document.getElementById('filter-list-' + col);
+    list.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = checked; });
+}
+
+function updateSelectAll(col) {
+    const list = document.getElementById('filter-list-' + col);
+    const all = list.querySelectorAll('input[type="checkbox"]');
+    const checked = list.querySelectorAll('input[type="checkbox"]:checked');
+    const selectAll = document.getElementById('filter-all-' + col);
+    if (selectAll) selectAll.checked = checked.length === all.length;
 }
 
 function filterSearchDD(input, col) {
