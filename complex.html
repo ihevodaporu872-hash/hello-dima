@@ -104,8 +104,13 @@
 
         .table-scroll {
             overflow-x: auto;
+            overflow-y: visible;
             margin: 0 -8px;
             padding: 0 8px;
+        }
+        /* Прайс-лист: не обрезать выпадающие фильтры */
+        #tab-prices .table-scroll {
+            overflow: visible;
         }
 
         .data-table {
