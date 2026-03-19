@@ -364,6 +364,107 @@
         .row-rab .type-cell { color: #f59e0b; }
         .row-mat .type-cell { color: #6b7280; }
 
+        /* Excel-style фильтры */
+        .th-filter {
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+        }
+        .th-filter .filter-arrow {
+            display: inline-block;
+            margin-left: 4px;
+            font-size: 0.55rem;
+            opacity: 0.5;
+            vertical-align: middle;
+        }
+        .th-filter:hover .filter-arrow { opacity: 1; }
+        .th-filter.filtered .filter-arrow { opacity: 1; color: #3b82f6; }
+
+        .filter-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 200px;
+            max-height: 320px;
+            background: #1a1d2e;
+            border: 1px solid #3b82f6;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            z-index: 200;
+            padding: 8px 0;
+            text-align: left;
+            overflow: hidden;
+            display: none;
+            flex-direction: column;
+        }
+        .filter-dropdown.open { display: flex; }
+
+        .filter-dropdown .filter-search {
+            margin: 0 8px 6px;
+            padding: 5px 8px;
+            background: #0f1117;
+            border: 1px solid #2a2d3a;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-size: 0.75rem;
+            font-family: inherit;
+            outline: none;
+        }
+        .filter-dropdown .filter-search:focus { border-color: #3b82f6; }
+
+        .filter-dropdown .filter-list {
+            overflow-y: auto;
+            max-height: 220px;
+            padding: 0 4px;
+        }
+
+        .filter-dropdown label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 8px;
+            font-size: 0.75rem;
+            color: #d1d5db;
+            cursor: pointer;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+        .filter-dropdown label:hover { background: #252838; }
+
+        .filter-dropdown input[type="checkbox"] {
+            accent-color: #3b82f6;
+            width: 14px;
+            height: 14px;
+        }
+
+        .filter-dropdown .filter-actions {
+            display: flex;
+            gap: 6px;
+            padding: 6px 8px 2px;
+            border-top: 1px solid #2a2d3a;
+            margin-top: 4px;
+        }
+        .filter-dropdown .filter-actions button {
+            flex: 1;
+            padding: 4px 8px;
+            font-size: 0.72rem;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .filter-dropdown .btn-apply {
+            background: #3b82f6;
+            color: #fff;
+        }
+        .filter-dropdown .btn-reset {
+            background: transparent;
+            border: 1px solid #2a2d3a !important;
+            color: #9ca3af;
+        }
+        .filter-dropdown .btn-reset:hover { color: #e0e0e0; }
+
         @media (max-width: 768px) {
             .container { padding: 0 12px; margin: 16px auto; }
             .card { padding: 16px; }
@@ -499,8 +600,6 @@
         <div class="card">
             <div class="card-title">Прайс-лист — Master Catalog</div>
             <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
-                <input type="text" id="price-search" placeholder="Поиск по названию или ID..." oninput="renderPriceTable()"
-                    style="flex:1;min-width:200px;padding:8px 12px;background:#0f1117;border:1px solid #2a2d3a;border-radius:6px;color:#e0e0e0;font-size:0.85rem;font-family:inherit">
                 <button class="btn" onclick="document.getElementById('import-file').click()">Импорт прайс-листа</button>
                 <input type="file" id="import-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="onFileSelected(this)">
             </div>
@@ -1127,34 +1226,46 @@ const BRAND_NAMES = {
     price_valfex: 'Valfex',
 };
 
+// Состояние фильтров: { Name: Set(['Труба...', ...]), DN: Set(['100', ...]) }
+const priceFilters = { Name: null, DN: null };
+let openFilterCol = null;
+
 function renderPriceTable() {
     const head = document.getElementById('price-head');
     const body = document.getElementById('price-body');
-    const search = (document.getElementById('price-search').value || '').toLowerCase();
 
     const allRows = Object.values(pricesData);
     if (!allRows.length) {
+        head.innerHTML = '';
         body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#6b7280;padding:24px">Загрузка цен...</td></tr>';
         return;
     }
 
-    // Определяем колонки с ценами, которые реально есть в данных
     const priceCols = Object.keys(BRAND_COL).map(brand => BRAND_COL[brand]).filter(col => {
         return allRows.some(r => r[col] !== null && r[col] !== undefined);
     });
 
+    const nameFiltered = priceFilters.Name ? ' filtered' : '';
+    const dnFiltered = priceFilters.DN ? ' filtered' : '';
+
     head.innerHTML = `<tr>
         <th style="text-align:left">ID</th>
-        <th style="text-align:left">Наименование</th>
-        <th>ДН</th>
+        <th style="text-align:left" class="th-filter${nameFiltered}" onclick="toggleFilter(event,'Name')">
+            Наименование <span class="filter-arrow">▼</span>
+            <div class="filter-dropdown" id="filter-dd-Name"></div>
+        </th>
+        <th class="th-filter${dnFiltered}" onclick="toggleFilter(event,'DN')">
+            ДН <span class="filter-arrow">▼</span>
+            <div class="filter-dropdown" id="filter-dd-DN"></div>
+        </th>
         ${priceCols.map(col => `<th>${BRAND_NAMES[col] || col}</th>`).join('')}
     </tr>`;
 
+    // Фильтрация
     const filtered = allRows.filter(r => {
-        if (!search) return true;
-        return (r.id || '').toLowerCase().includes(search) ||
-               (r.Name || '').toLowerCase().includes(search) ||
-               (r.DN || '').toString().toLowerCase().includes(search);
+        if (priceFilters.Name && !priceFilters.Name.has(r.Name || '')) return false;
+        if (priceFilters.DN && !priceFilters.DN.has(String(r.DN || ''))) return false;
+        return true;
     });
 
     filtered.sort((a, b) => (a.Name || '').localeCompare(b.Name || '', 'ru'));
@@ -1169,6 +1280,97 @@ function renderPriceTable() {
         }).join('')}
     </tr>`).join('');
 }
+
+function toggleFilter(e, col) {
+    e.stopPropagation();
+    const dd = document.getElementById('filter-dd-' + col);
+    if (!dd) return;
+
+    // Если клик по элементам внутри дропдауна — не закрывать
+    if (e.target.closest('.filter-dropdown')) return;
+
+    const isOpen = dd.classList.contains('open');
+
+    // Закрыть все
+    document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
+    openFilterCol = null;
+
+    if (isOpen) return;
+
+    // Собрать уникальные значения
+    const allRows = Object.values(pricesData);
+    let values = [...new Set(allRows.map(r => String(col === 'DN' ? (r.DN || '') : (r.Name || ''))))].filter(v => v);
+
+    if (col === 'DN') {
+        values.sort((a, b) => {
+            const na = parseFloat(a), nb = parseFloat(b);
+            if (!isNaN(na) && !isNaN(nb)) return na - nb;
+            return a.localeCompare(b);
+        });
+    } else {
+        values.sort((a, b) => a.localeCompare(b, 'ru'));
+    }
+
+    const currentFilter = priceFilters[col];
+
+    dd.innerHTML = `
+        <input type="text" class="filter-search" placeholder="Поиск..." oninput="filterSearchDD(this, '${col}')" onclick="event.stopPropagation()">
+        <div class="filter-list" id="filter-list-${col}">
+            ${values.map(v => {
+                const checked = !currentFilter || currentFilter.has(v) ? 'checked' : '';
+                return `<label onclick="event.stopPropagation()"><input type="checkbox" value="${v.replace(/"/g,'&quot;')}" ${checked}> ${v}</label>`;
+            }).join('')}
+        </div>
+        <div class="filter-actions" onclick="event.stopPropagation()">
+            <button class="btn-reset" onclick="resetFilter('${col}')">Сбросить</button>
+            <button class="btn-apply" onclick="applyFilter('${col}')">Применить</button>
+        </div>
+    `;
+
+    dd.classList.add('open');
+    openFilterCol = col;
+    dd.querySelector('.filter-search').focus();
+}
+
+function filterSearchDD(input, col) {
+    const q = input.value.toLowerCase();
+    const list = document.getElementById('filter-list-' + col);
+    list.querySelectorAll('label').forEach(lbl => {
+        const text = lbl.textContent.toLowerCase();
+        lbl.style.display = text.includes(q) ? '' : 'none';
+    });
+}
+
+function applyFilter(col) {
+    const list = document.getElementById('filter-list-' + col);
+    const checked = [...list.querySelectorAll('input[type="checkbox"]:checked')].map(cb => cb.value);
+    const all = [...list.querySelectorAll('input[type="checkbox"]')];
+
+    if (checked.length === all.length || checked.length === 0) {
+        priceFilters[col] = null; // Все выбраны = нет фильтра
+    } else {
+        priceFilters[col] = new Set(checked);
+    }
+
+    document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
+    openFilterCol = null;
+    renderPriceTable();
+}
+
+function resetFilter(col) {
+    priceFilters[col] = null;
+    document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
+    openFilterCol = null;
+    renderPriceTable();
+}
+
+// Закрывать фильтр при клике вне
+document.addEventListener('click', (e) => {
+    if (openFilterCol && !e.target.closest('.th-filter')) {
+        document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
+        openFilterCol = null;
+    }
+});
 
 // === Импорт прайс-листа ===
 let importRows = []; // временные данные из файла
