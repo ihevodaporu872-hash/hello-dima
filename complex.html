@@ -382,6 +382,7 @@
 <nav class="nav">
     <a href="#" class="active" onclick="switchTab('input', this); return false;">Исходные данные</a>
     <a href="#" onclick="switchTab('calc', this); return false;">Расчёт</a>
+    <a href="#" onclick="switchTab('prices', this); return false;">Прайс-листы</a>
 </nav>
 
 <div class="container">
@@ -487,6 +488,23 @@
                 <table class="data-table">
                     <thead id="calc-k11-head"></thead>
                     <tbody id="calc-k11-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- === Вкладка: Прайс-листы === -->
+    <div id="tab-prices" style="display:none">
+        <div class="card">
+            <div class="card-title">Прайс-лист — Master Catalog</div>
+            <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+                <input type="text" id="price-search" placeholder="Поиск по названию или ID..." oninput="renderPriceTable()"
+                    style="flex:1;min-width:200px;padding:8px 12px;background:#0f1117;border:1px solid #2a2d3a;border-radius:6px;color:#e0e0e0;font-size:0.85rem;font-family:inherit">
+            </div>
+            <div class="table-scroll">
+                <table class="data-table" id="price-table">
+                    <thead id="price-head"></thead>
+                    <tbody id="price-body"></tbody>
                 </table>
             </div>
         </div>
@@ -1032,10 +1050,72 @@ function resetAll() {
 function switchTab(tabId, linkEl) {
     document.getElementById('tab-input').style.display = tabId === 'input' ? '' : 'none';
     document.getElementById('tab-calc').style.display = tabId === 'calc' ? '' : 'none';
+    document.getElementById('tab-prices').style.display = tabId === 'prices' ? '' : 'none';
     document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
     linkEl.classList.add('active');
     localStorage.setItem('complex_active_tab', tabId);
+    if (tabId === 'prices') renderPriceTable();
     recalculate();
+}
+
+// === Прайс-листы ===
+const BRAND_NAMES = {
+    price_avf: 'AVF',
+    price_smart: 'Smart',
+    price_conpipe: 'Con-Pipe',
+    price_pamglobal: 'Pam-Global',
+    price_halifax: 'Halifax',
+    price_kontur: 'Контур-Уют',
+    price_rosturplast: 'РосТурПласт',
+    price_ostendorf: 'Ostendorf',
+    price_proaqua: 'Pro Aqua',
+    price_rehau: 'Rehau',
+    price_sinikon: 'Синикон',
+    price_uponor: 'Uponor',
+    price_valfex: 'Valfex',
+};
+
+function renderPriceTable() {
+    const head = document.getElementById('price-head');
+    const body = document.getElementById('price-body');
+    const search = (document.getElementById('price-search').value || '').toLowerCase();
+
+    const allRows = Object.values(pricesData);
+    if (!allRows.length) {
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#6b7280;padding:24px">Загрузка цен...</td></tr>';
+        return;
+    }
+
+    // Определяем колонки с ценами, которые реально есть в данных
+    const priceCols = Object.keys(BRAND_COL).map(brand => BRAND_COL[brand]).filter(col => {
+        return allRows.some(r => r[col] !== null && r[col] !== undefined);
+    });
+
+    head.innerHTML = `<tr>
+        <th style="text-align:left">ID</th>
+        <th style="text-align:left">Наименование</th>
+        <th>ДН</th>
+        ${priceCols.map(col => `<th>${BRAND_NAMES[col] || col}</th>`).join('')}
+    </tr>`;
+
+    const filtered = allRows.filter(r => {
+        if (!search) return true;
+        return (r.id || '').toLowerCase().includes(search) ||
+               (r.Name || '').toLowerCase().includes(search) ||
+               (r.DN || '').toString().toLowerCase().includes(search);
+    });
+
+    filtered.sort((a, b) => (a.Name || '').localeCompare(b.Name || '', 'ru'));
+
+    body.innerHTML = filtered.map(r => `<tr>
+        <td style="text-align:left;font-size:0.68rem;color:#6b7280">${r.id || ''}</td>
+        <td style="text-align:left;white-space:normal;max-width:200px">${r.Name || ''}</td>
+        <td>${r.DN || '—'}</td>
+        ${priceCols.map(col => {
+            const v = r[col];
+            return `<td style="color:${v ? '#e0e0e0' : '#333'}">${v ? parseFloat(v).toLocaleString('ru-RU') + ' ₽' : '—'}</td>`;
+        }).join('')}
+    </tr>`).join('');
 }
 
 // === Инициализация ===
@@ -1047,7 +1127,7 @@ loadPrices();
 const savedTab = localStorage.getItem('complex_active_tab');
 if (savedTab && savedTab !== 'input') {
     const links = document.querySelectorAll('.nav a');
-    const idx = savedTab === 'calc' ? 1 : 0;
+    const idx = savedTab === 'calc' ? 1 : savedTab === 'prices' ? 2 : 0;
     switchTab(savedTab, links[idx]);
 }
 </script>
