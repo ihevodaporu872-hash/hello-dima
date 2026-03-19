@@ -784,6 +784,33 @@ const MAT_K11_PVC = [
     { type:'мат', name:'Клапан воздушный HL900N',                        unit:'шт', priceId:'klapan_hl900n', calc: b => val('sanitary',b) },
 ];
 
+// === Материалы К2 (ливневая канализация) ===
+// Вариант 1: Чугунные стояки
+const MAT_K2_CAST_IRON = [
+    { type:'раб', name:'Монтаж трубы чугунной',                         unit:'м',  priceId:'montazh_truby_chug', calc: b => val('k2',b) * val('height',b) },
+    { type:'мат', name:'Труба чугун SML L=3000 мм',   brand:'Smart', unit:'м',  dns:DN_SML, defaultDn:100, pricePer:3, priceKey: dn=>`truba_${dn}`, calc: b => val('k2',b) * val('height',b) },
+    { type:'мат', name:'Фитинги 20%',                                   unit:'компл', priceId:'fitingi_k2_chug', calc: b => Math.ceil(val('k2',b) * val('height',b) * 0.2) },
+    { type:'раб', name:'Монтаж воронки кровельной',                      unit:'шт', priceId:'montazh_voronki', calc: b => val('funnels',b) },
+    { type:'мат', name:'Кровельная воронка HL62',                        unit:'шт', priceId:'voronka_hl62', calc: b => val('funnels',b) },
+    { type:'мат', name:'HL 618 Надставной элемент, DN 195',              unit:'шт', priceId:'hl618_nadstavnoy', calc: b => val('funnels',b) },
+    { type:'раб', name:'Изоляция трубопроводов',                         unit:'м',  priceId:'izol_truboprovodov', calc: b => val('k2',b) * val('height',b) },
+    { type:'мат', name:'Цилиндры теплоизоляционные',                     unit:'м',  priceId:'tsilindry_teploizol_k2', calc: b => val('k2',b) * val('height',b) },
+];
+
+// Вариант 2: НПВХ стояки
+const MAT_K2_PVC = [
+    { type:'раб', name:'Монтаж трубы НПВХ',                             unit:'м',  priceId:'montazh_truby_pvh', calc: b => val('k2',b) * val('height',b) },
+    { type:'мат', name:'Труба НПВХ',                       brand:true,  unit:'м',  pricePer:3, priceId:'truba_pvh_110', calc: b => val('k2',b) * val('height',b) },
+    { type:'мат', name:'Фитинги 20%',                                   unit:'компл', priceId:'fitingi_k2_pvh', calc: b => Math.ceil(val('k2',b) * val('height',b) * 0.2) },
+    { type:'раб', name:'Монтаж кровельной воронки',                      unit:'шт', priceId:'montazh_voronki', calc: b => val('funnels',b) },
+    { type:'мат', name:'Кровельная воронка HL62',                        unit:'шт', priceId:'voronka_hl62', calc: b => val('funnels',b) },
+    { type:'мат', name:'HL 618 Надставной элемент, DN 195',              unit:'шт', priceId:'hl618_nadstavnoy', calc: b => val('funnels',b) },
+    { type:'раб', name:'Изоляция трубопроводов',                         unit:'м',  priceId:'izol_truboprovodov', calc: b => val('k2',b) * val('height',b) },
+    { type:'мат', name:'Цилиндры теплоизоляционные',                     unit:'м',  priceId:'tsilindry_teploizol_k2', calc: b => val('k2',b) * val('height',b) },
+    { type:'раб', name:'Монтаж муфты противопожарной (Огнеза)',          unit:'шт', priceId:'montazh_mufty', calc: b => val('k2',b) * val('floors',b) },
+    { type:'мат', name:'Муфта противопожарная "ОГНЕЗА-ПМ/110"',         unit:'шт', priceId:'mufta_ogneza', calc: b => val('k2',b) * val('floors',b) },
+];
+
 // === Сохранение в localStorage ===
 const STORAGE_KEY = 'complex_data';
 
@@ -880,6 +907,9 @@ function recalculate() {
 
     // Расчёт К1.1 (добавляется в ту же таблицу)
     renderCalcK11();
+
+    // Расчёт К2
+    renderCalcK2();
 }
 
 function onMaterialChange() {
@@ -1131,8 +1161,113 @@ function renderCalcK11() {
         <td style="font-weight:700;color:#10b981">${grandTotal ? grandTotal.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
     </tr>`;
 
+    window._k11Total = grandTotal;
+}
+
+function renderCalcK2() {
+    const materialSel = document.getElementById('material-k1');
+    const material = materialSel ? materialSel.value : 'cast_iron';
+    const rows = material === 'cast_iron' ? MAT_K2_CAST_IRON : MAT_K2_PVC;
+    const selectedBrand = material === 'cast_iron'
+        ? document.getElementById('brand-iron').value
+        : document.getElementById('brand-pvc').value;
+
+    const body = document.getElementById('calc-k1-body');
+
+    // Разделитель секции К2
+    body.innerHTML += `<tr class="section-row">
+        <td colspan="${7 + buildings.length}">Система ливневая К2 (стояки ${material === 'cast_iron' ? 'чугунные' : 'НПВХ клеевые'})</td>
+    </tr>`;
+
+    let grandTotal = 0;
+    body.innerHTML += rows.map((row, i) => {
+        const isRab = row.type === 'раб';
+        const hasDn = !!(row.dns || row.dnPairs);
+        const isPair = !!row.dnPairs;
+        const defVal = isPair ? row.defaultPair : row.defaultDn;
+        const mainKey = 'k2_' + material + '_main_' + i;
+        const mainDn = hasDn ? (selectedDns[mainKey] ?? defVal) : null;
+
+        let dnCell = '<td></td>';
+        if (hasDn && !isRab) {
+            const opts = isPair ? row.dnPairs : row.dns;
+            dnCell = `<td><select class="dn-select${isPair?' dn-select-pair':''}" onchange="onDnMain('k2_${material}',${i},this.value)">` +
+                opts.map(o => {
+                    const label = isPair ? o.replace('_','×') : o;
+                    return `<option value="${o}"${o==mainDn?' selected':''}>${label}</option>`;
+                }).join('') + `</select></td>`;
+        }
+
+        let totalQty = 0;
+        let totalCost = 0;
+
+        const cells = buildings.map(b => {
+            const qty = row.calc(b.id);
+            totalQty += qty;
+
+            const bldKey = 'k2_' + material + '_' + i + '_' + b.id;
+            const curDn = hasDn ? (selectedDns[bldKey] ?? mainDn) : null;
+            const expanded = hasDn && !!dnBldExpanded[b.id];
+
+            let priceId = row.priceId || '';
+            if (hasDn && row.priceKey) priceId = row.priceKey(curDn);
+
+            let price = getPrice(priceId, selectedBrand);
+            if (row.pricePer && price) price = +(price / row.pricePer).toFixed(2);
+            totalCost += price * qty;
+
+            let dnHtml = '';
+            if (expanded && hasDn) {
+                const opts = isPair ? row.dnPairs : row.dns;
+                dnHtml = `<select class="dn-mini${isPair?' dn-mini-pair':''}" onchange="onDnChange('${bldKey}',this.value)">` +
+                    opts.map(o => {
+                        const label = isPair ? o.replace('_','×') : o;
+                        return `<option value="${o}"${o==curDn?' selected':''}>${label}</option>`;
+                    }).join('') + `</select>`;
+            }
+
+            return expanded && hasDn
+                ? `<td><div style="display:inline-flex;align-items:baseline;gap:2px">${dnHtml} <span>${fmt(qty)}</span></div></td>`
+                : `<td>${fmt(qty)}</td>`;
+        }).join('');
+
+        totalCost = +totalCost.toFixed(2);
+        grandTotal += totalCost;
+
+        let basePrice = 0;
+        {
+            let pid = row.priceId || '';
+            if (hasDn && row.priceKey) pid = row.priceKey(mainDn);
+            basePrice = getPrice(pid, selectedBrand);
+            if (row.pricePer && basePrice) basePrice = +(basePrice / row.pricePer).toFixed(2);
+        }
+
+        const brandLabel = row.brand ? selectedBrand : '';
+        const nameText = brandLabel
+            ? `${row.name} <span style="color:#6b7280;font-size:0.68rem">${brandLabel}</span>`
+            : row.name;
+
+        return `<tr class="${isRab ? 'row-rab' : 'row-mat'}">
+            <td class="type-cell">${row.type}</td>
+            <td style="text-align:left;white-space:normal;max-width:200px">${nameText}</td>
+            <td class="unit-cell">${row.unit}</td>
+            ${hasDn ? dnCell : '<td></td>'}
+            <td style="color:#94a3b8;font-size:0.75rem">${basePrice ? basePrice.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+            ${cells}
+            <td class="total-cell">${fmt(totalQty)}</td>
+            <td style="color:#10b981;font-weight:600">${totalCost ? totalCost.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+        </tr>`;
+    }).join('');
+
+    // Подитого К2
+    body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
+        <td colspan="2" style="text-align:left;font-weight:700;color:#94a3b8;font-size:0.75rem">Итого К2</td>
+        <td colspan="${4 + buildings.length}"></td>
+        <td style="font-weight:700;color:#10b981">${grandTotal ? grandTotal.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+    </tr>`;
+
     // Общий итого
-    const total = (window._k1Total || 0) + grandTotal;
+    const total = (window._k1Total || 0) + (window._k11Total || 0) + grandTotal;
     body.innerHTML += `<tr style="border-top:3px solid #3b82f6;background:rgba(59,130,246,0.08)">
         <td colspan="2" style="text-align:left;font-weight:700;color:#e0e0e0;font-size:0.85rem">ОБЩИЙ ИТОГО</td>
         <td colspan="${4 + buildings.length}"></td>
