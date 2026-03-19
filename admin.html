@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Админ — Управление ценами Supabase</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
+h1 { color: #00d4ff; margin-bottom: 20px; font-size: 1.4em; }
+h2 { color: #ff9f43; margin: 20px 0 10px; font-size: 1.1em; }
+
+.panel { background: #16213e; border: 1px solid #0f3460; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+label { display: block; margin-bottom: 6px; color: #aaa; font-size: 0.85em; }
+input[type="password"], input[type="text"], textarea {
+    width: 100%; padding: 8px 12px; background: #0f3460; border: 1px solid #1a3a6b;
+    color: #e0e0e0; border-radius: 4px; font-size: 0.9em; margin-bottom: 10px;
+}
+textarea { height: 200px; font-family: monospace; font-size: 0.8em; resize: vertical; }
+button {
+    padding: 8px 20px; border: none; border-radius: 4px; cursor: pointer;
+    font-size: 0.9em; font-weight: 600; margin-right: 8px; margin-bottom: 8px;
+}
+.btn-primary { background: #00d4ff; color: #1a1a2e; }
+.btn-success { background: #2ed573; color: #1a1a2e; }
+.btn-warning { background: #ff9f43; color: #1a1a2e; }
+.btn-danger  { background: #ff4757; color: #fff; }
+button:hover { opacity: 0.85; }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+table { width: 100%; border-collapse: collapse; font-size: 0.8em; margin-top: 10px; }
+th { background: #0f3460; color: #00d4ff; padding: 8px 6px; text-align: left; position: sticky; top: 0; }
+td { padding: 6px; border-bottom: 1px solid #1a3a6b; }
+tr:hover { background: #1a3a6b33; }
+td input { width: 100%; background: #0a1628; border: 1px solid #1a3a6b; color: #e0e0e0; padding: 4px 6px; border-radius: 3px; }
+td input:focus { border-color: #00d4ff; outline: none; }
+
+.status { padding: 8px 12px; border-radius: 4px; margin: 10px 0; font-size: 0.85em; }
+.status-ok { background: #2ed57322; border: 1px solid #2ed573; color: #2ed573; }
+.status-err { background: #ff475722; border: 1px solid #ff4757; color: #ff4757; }
+.status-info { background: #00d4ff22; border: 1px solid #00d4ff; color: #00d4ff; }
+
+.tab-bar { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+.tab-bar button { border-radius: 4px 4px 0 0; background: #0f3460; color: #aaa; border: 1px solid #1a3a6b; border-bottom: none; }
+.tab-bar button.active { background: #16213e; color: #00d4ff; border-color: #00d4ff; }
+
+.table-wrap { max-height: 600px; overflow: auto; border: 1px solid #0f3460; border-radius: 4px; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; }
+.badge-ok { background: #2ed57333; color: #2ed573; }
+.badge-miss { background: #ff475733; color: #ff4757; }
+
+#sql-output { white-space: pre-wrap; font-family: monospace; font-size: 0.8em; background: #0a1628; padding: 12px; border-radius: 4px; max-height: 400px; overflow: auto; }
+.flex-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<h1>Управление ценами — Master Catalog</h1>
+
+<!-- Connection -->
+<div class="panel">
+    <label>Supabase URL</label>
+    <input type="text" id="sb-url" value="https://dnytjdnzudzphgkkskni.supabase.co">
+    <label>Service Role Key (secret) — не сохраняется, только в памяти браузера</label>
+    <input type="password" id="sb-key" placeholder="sb_secret_...">
+    <div class="flex-row">
+        <button class="btn-primary" onclick="connect()">Подключиться</button>
+        <button class="btn-warning" onclick="loadFromDB()">Загрузить данные</button>
+        <span id="conn-status"></span>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="tab-bar">
+    <button class="active" onclick="switchTab('table')">Таблица цен</button>
+    <button onclick="switchTab('csv')">Импорт CSV</button>
+    <button onclick="switchTab('sql')">SQL-генератор</button>
+    <button onclick="switchTab('missing')">Недостающие строки</button>
+</div>
+
+<!-- Tab: Table -->
+<div id="tab-table" class="panel">
+    <h2>Текущие данные в Master Catalog</h2>
+    <div class="flex-row" style="margin-bottom:10px">
+        <button class="btn-success" onclick="saveChanges()">Сохранить изменения</button>
+        <button class="btn-warning" onclick="loadFromDB()">Обновить</button>
+        <span id="save-status"></span>
+    </div>
+    <div class="table-wrap">
+        <table id="data-table">
+            <thead><tr><th>id</th><th>Name</th><th>DN</th><th>price_avf</th><th>price_smart</th><th>валюта</th></tr></thead>
+            <tbody id="data-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Tab: CSV Import -->
+<div id="tab-csv" class="panel" style="display:none">
+    <h2>Импорт из CSV</h2>
+    <p style="color:#aaa;font-size:0.85em;margin-bottom:10px">
+        Вставьте данные из Excel (скопируйте ячейки → Ctrl+V сюда). Разделитель: табуляция или точка с запятой.<br>
+        Формат: <code>id ; Name ; DN ; price_avf ; price_smart ; валюта</code><br>
+        Первая строка — заголовки (будет пропущена, если содержит "id").
+    </p>
+    <textarea id="csv-input" placeholder="id;Name;DN;price_avf;price_smart;валюта
+truba_100;Труба чугунная безраструбная;100;5000;5378.70;руб
+..."></textarea>
+    <div class="flex-row">
+        <button class="btn-primary" onclick="parseCSV()">Разобрать CSV</button>
+        <button class="btn-success" onclick="uploadCSV()" id="btn-upload-csv" disabled>Загрузить в Supabase</button>
+        <span id="csv-status"></span>
+    </div>
+    <div id="csv-preview" style="margin-top:10px"></div>
+</div>
+
+<!-- Tab: SQL -->
+<div id="tab-sql" class="panel" style="display:none">
+    <h2>SQL-генератор</h2>
+    <p style="color:#aaa;font-size:0.85em;margin-bottom:10px">
+        Генерирует SQL для вставки недостающих строк. Скопируйте и выполните в Supabase SQL Editor.
+    </p>
+    <button class="btn-primary" onclick="generateSQL()">Сгенерировать SQL</button>
+    <button class="btn-warning" onclick="copySQL()">Скопировать</button>
+    <div id="sql-output" style="margin-top:10px"></div>
+</div>
+
+<!-- Tab: Missing -->
+<div id="tab-missing" class="panel" style="display:none">
+    <h2>Недостающие строки для калькулятора</h2>
+    <p style="color:#aaa;font-size:0.85em;margin-bottom:10px">
+        Эти id используются в калькуляторе (complex.html), но отсутствуют в базе данных.
+    </p>
+    <button class="btn-primary" onclick="checkMissing()">Проверить</button>
+    <button class="btn-success" onclick="addMissing()">Добавить недостающие в Supabase</button>
+    <div id="missing-list" style="margin-top:10px"></div>
+</div>
+
+<script>
+const SUPABASE_URL_DEFAULT = 'https://dnytjdnzudzphgkkskni.supabase.co';
+let sbClient = null;
+let dbData = []; // current data from DB
+
+// All priceIds used in complex.html calculator
+const CALC_ITEMS = [
+    // Cast Iron
+    { id: 'montazh_truby_chug', name: 'Монтаж трубы чугунной', dn: '100', unit: 'м' },
+    { id: 'truba_100', name: 'Труба чугунная SML L=3000 мм', dn: '100', unit: 'м' },
+    { id: 'krest_100_100(88)', name: 'Крестовина одноплоскостная SML 88°', dn: '100_100', unit: 'шт' },
+    { id: 'troynik_100_100(45)', name: 'Тройник SML 45°', dn: '100_100', unit: 'шт' },
+    { id: 'zaglushka_100', name: 'Заглушка Konfix', dn: '100', unit: 'шт' },
+    { id: 'rev_100', name: 'Ревизия чугун SML', dn: '100', unit: 'шт' },
+    { id: 'opora_100', name: 'Труба опорная', dn: '100', unit: 'шт' },
+    { id: 'koltso_opornoe_100', name: 'Кольцо опорное', dn: '100', unit: 'шт' },
+    { id: 'konsol_opornaya_100', name: 'Консоль опорная для чугунных труб', dn: '100', unit: 'шт' },
+    { id: 'rapid_100', name: 'Хомут Rapid', dn: '100', unit: 'шт' },
+    { id: 'khomut_trub', name: 'Хомут для труб', dn: '100', unit: 'шт' },
+    { id: 'tsanga_m12', name: 'Цанга М12', dn: '', unit: 'шт' },
+    { id: 'montazh_teploizol', name: 'Монтаж теплоизоляции (гильзы)', dn: '', unit: 'шт' },
+    { id: 'tsilindr_teploizol', name: 'Цилиндр теплоизол. Ду125', dn: '125', unit: 'м' },
+    // PVC
+    { id: 'montazh_truby_pvh', name: 'Монтаж труб ПВХ', dn: '110', unit: 'м' },
+    { id: 'truba_pvh_110', name: 'Труба ПВХ L=3000 мм', dn: '110', unit: 'м' },
+    { id: 'krest_pvh_110_110(88)', name: 'Крестовина одноплоскостная ПВХ 88°', dn: '110_110', unit: 'шт' },
+    { id: 'troynik_pvh_110_110(88)', name: 'Тройник ПВХ 88°', dn: '110_110', unit: 'шт' },
+    { id: 'zaglushka_pvh_110', name: 'Заглушка ПВХ', dn: '110', unit: 'шт' },
+    { id: 'rev_pvh_110', name: 'Ревизия круглая ПВХ', dn: '110', unit: 'шт' },
+    { id: 'khomut_trub_pvh', name: 'Хомут для труб ПВХ', dn: '110', unit: 'шт' },
+    { id: 'tsanga_m12_pvh', name: 'Цанга М12 (ПВХ)', dn: '', unit: 'шт' },
+    { id: 'montazh_mufty', name: 'Монтаж муфты противопожарной', dn: '110', unit: 'шт' },
+    { id: 'mufta_ogneza', name: 'Муфта противопожарная ОГНЕЗА-ПМ/110', dn: '110', unit: 'шт' },
+];
+
+function showStatus(elId, msg, type) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.className = 'status status-' + type;
+    el.textContent = msg;
+}
+
+function connect() {
+    const url = document.getElementById('sb-url').value.trim();
+    const key = document.getElementById('sb-key').value.trim();
+    if (!key) { showStatus('conn-status', 'Введите Secret Key', 'err'); return; }
+    try {
+        sbClient = supabase.createClient(url, key);
+        showStatus('conn-status', 'Подключено!', 'ok');
+        loadFromDB();
+    } catch(e) {
+        showStatus('conn-status', 'Ошибка: ' + e.message, 'err');
+    }
+}
+
+async function loadFromDB() {
+    if (!sbClient) { showStatus('conn-status', 'Сначала подключитесь', 'err'); return; }
+    try {
+        const { data, error } = await sbClient.from('Master Catalog').select('*').order('id');
+        if (error) throw error;
+        dbData = data || [];
+        renderTable();
+        showStatus('conn-status', `Загружено ${dbData.length} строк`, 'ok');
+    } catch(e) {
+        showStatus('conn-status', 'Ошибка загрузки: ' + e.message, 'err');
+    }
+}
+
+function renderTable() {
+    const tbody = document.getElementById('data-body');
+    tbody.innerHTML = '';
+    dbData.forEach((row, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${row.id}</strong></td>
+            <td><input data-idx="${i}" data-col="Name" value="${row.Name || ''}"></td>
+            <td><input data-idx="${i}" data-col="DN" value="${row.DN || ''}" style="width:60px"></td>
+            <td><input data-idx="${i}" data-col="price_avf" type="number" step="0.01" value="${row.price_avf ?? ''}"></td>
+            <td><input data-idx="${i}" data-col="price_smart" type="number" step="0.01" value="${row.price_smart ?? ''}"></td>
+            <td><input data-idx="${i}" data-col="валюта" value="${row['валюта'] || ''}" style="width:60px"></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+async function saveChanges() {
+    if (!sbClient) { showStatus('save-status', 'Не подключено', 'err'); return; }
+    const inputs = document.querySelectorAll('#data-body input');
+    const updates = {};
+    inputs.forEach(inp => {
+        const idx = inp.dataset.idx;
+        const col = inp.dataset.col;
+        if (!updates[idx]) updates[idx] = { id: dbData[idx].id };
+        let v = inp.value.trim();
+        if (col.startsWith('price_') && v !== '') v = parseFloat(v);
+        if (col.startsWith('price_') && v === '') v = null;
+        updates[idx][col] = v;
+    });
+    let ok = 0, fail = 0;
+    for (const idx of Object.keys(updates)) {
+        const row = updates[idx];
+        const { error } = await sbClient.from('Master Catalog').update(row).eq('id', row.id);
+        if (error) { fail++; console.error(error); } else { ok++; }
+    }
+    showStatus('save-status', `Обновлено: ${ok}, ошибок: ${fail}`, fail ? 'err' : 'ok');
+    loadFromDB();
+}
+
+// === CSV ===
+let csvParsed = [];
+
+function parseCSV() {
+    const raw = document.getElementById('csv-input').value.trim();
+    if (!raw) { showStatus('csv-status', 'Вставьте данные', 'err'); return; }
+
+    const lines = raw.split('\n').map(l => l.trim()).filter(l => l);
+    csvParsed = [];
+    const cols = ['id', 'Name', 'DN', 'price_avf', 'price_smart', 'валюта'];
+
+    for (let i = 0; i < lines.length; i++) {
+        // Try tab first, then semicolon, then comma
+        let parts = lines[i].split('\t');
+        if (parts.length < 2) parts = lines[i].split(';');
+        if (parts.length < 2) parts = lines[i].split(',');
+
+        // Skip header row
+        if (i === 0 && parts[0].trim().toLowerCase() === 'id') continue;
+
+        const row = {};
+        parts.forEach((val, j) => {
+            if (j < cols.length) {
+                let v = val.trim();
+                if (cols[j].startsWith('price_')) {
+                    v = v.replace(/\s/g, '').replace(',', '.');
+                    v = v ? parseFloat(v) || null : null;
+                }
+                row[cols[j]] = v;
+            }
+        });
+        if (row.id) csvParsed.push(row);
+    }
+
+    // Preview
+    const prev = document.getElementById('csv-preview');
+    if (csvParsed.length === 0) {
+        prev.innerHTML = '<div class="status status-err">Не удалось разобрать данные</div>';
+        return;
+    }
+    let html = `<div class="status status-ok">Разобрано ${csvParsed.length} строк</div>`;
+    html += '<div class="table-wrap" style="max-height:300px"><table><thead><tr>';
+    cols.forEach(c => html += `<th>${c}</th>`);
+    html += '</tr></thead><tbody>';
+    csvParsed.forEach(row => {
+        html += '<tr>';
+        cols.forEach(c => html += `<td>${row[c] ?? ''}</td>`);
+        html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    prev.innerHTML = html;
+    document.getElementById('btn-upload-csv').disabled = false;
+    showStatus('csv-status', `Готово: ${csvParsed.length} строк`, 'ok');
+}
+
+async function uploadCSV() {
+    if (!sbClient) { showStatus('csv-status', 'Не подключено', 'err'); return; }
+    if (!csvParsed.length) { showStatus('csv-status', 'Сначала разберите CSV', 'err'); return; }
+
+    let ok = 0, fail = 0;
+    for (const row of csvParsed) {
+        const { error } = await sbClient.from('Master Catalog').upsert(row, { onConflict: 'id' });
+        if (error) { fail++; console.error(row.id, error); } else { ok++; }
+    }
+    showStatus('csv-status', `Загружено: ${ok}, ошибок: ${fail}`, fail ? 'err' : 'ok');
+    loadFromDB();
+}
+
+// === SQL Generator ===
+function generateSQL() {
+    const existing = new Set(dbData.map(r => r.id));
+    const missing = CALC_ITEMS.filter(item => !existing.has(item.id));
+
+    let sql = '-- Добавление недостающих строк для калькулятора\n';
+    sql += '-- Выполните в Supabase → SQL Editor\n\n';
+
+    if (missing.length === 0) {
+        sql += '-- Все строки уже есть в базе!\n';
+    } else {
+        sql += `INSERT INTO "Master Catalog" (id, "Name", "DN") VALUES\n`;
+        sql += missing.map(item =>
+            `  ('${item.id}', '${item.name.replace(/'/g, "''")}', '${item.dn}')`
+        ).join(',\n');
+        sql += `\nON CONFLICT (id) DO NOTHING;\n`;
+    }
+
+    sql += '\n\n-- Пример обновления цены:\n';
+    sql += `-- UPDATE "Master Catalog" SET price_smart = 5378.70 WHERE id = 'truba_100';\n`;
+    sql += `-- UPDATE "Master Catalog" SET price_avf = 6200 WHERE id = 'truba_100';\n`;
+
+    document.getElementById('sql-output').textContent = sql;
+}
+
+function copySQL() {
+    const text = document.getElementById('sql-output').textContent;
+    navigator.clipboard.writeText(text).then(() => alert('SQL скопирован!'));
+}
+
+// === Missing check ===
+function checkMissing() {
+    const existing = new Set(dbData.map(r => r.id));
+    let html = '<table><thead><tr><th>priceId</th><th>Название</th><th>DN</th><th>Статус</th></tr></thead><tbody>';
+    CALC_ITEMS.forEach(item => {
+        const found = existing.has(item.id);
+        const badge = found
+            ? '<span class="badge badge-ok">В базе</span>'
+            : '<span class="badge badge-miss">Отсутствует</span>';
+        html += `<tr><td><strong>${item.id}</strong></td><td>${item.name}</td><td>${item.dn}</td><td>${badge}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('missing-list').innerHTML = html;
+}
+
+// === Tabs ===
+function switchTab(name) {
+    document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('[id^="tab-"]').forEach(p => p.style.display = 'none');
+    event.target.classList.add('active');
+    document.getElementById('tab-' + name).style.display = '';
+}
+</script>
+</body>
+</html>

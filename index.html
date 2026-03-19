@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Расчёт канализации — СП 30.13330</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            background: #0f1117;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.5;
+        }
+
+        .header {
+            background: #161922;
+            border-bottom: 1px solid #2a2d3a;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-icon {
+            width: 36px;
+            height: 36px;
+            background: #3b82f6;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .header h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #f0f0f0;
+        }
+
+        .header span {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-left: auto;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 32px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .card {
+            background: #161922;
+            border: 1px solid #2a2d3a;
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .card-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #3b82f6;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            background: #0f1117;
+            border: 1px solid #2a2d3a;
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .form-group select option {
+            background: #161922;
+        }
+
+        .hint {
+            font-size: 0.7rem;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: #3b82f6;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 8px;
+        }
+
+        .btn:hover {
+            background: #2563eb;
+        }
+
+        .results {
+            grid-column: 1 / -1;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .result-item {
+            background: #0f1117;
+            border: 1px solid #2a2d3a;
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .result-item .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #3b82f6;
+            margin-bottom: 4px;
+        }
+
+        .result-item .label {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        .result-item .unit {
+            font-size: 0.85rem;
+            color: #6b7280;
+            font-weight: 400;
+        }
+
+        .result-item.ok .value { color: #22c55e; }
+        .result-item.warn .value { color: #f59e0b; }
+        .result-item.error .value { color: #ef4444; }
+
+        .status-bar {
+            grid-column: 1 / -1;
+            background: #161922;
+            border: 1px solid #2a2d3a;
+            border-radius: 12px;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #6b7280;
+        }
+
+        .status-dot.ok { background: #22c55e; }
+        .status-dot.warn { background: #f59e0b; }
+        .status-dot.error { background: #ef4444; }
+
+        .hidden { display: none; }
+
+        .table-wrap {
+            grid-column: 1 / -1;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th, td {
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid #2a2d3a;
+        }
+
+        th {
+            color: #9ca3af;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td { color: #e0e0e0; }
+
+        @media (max-width: 640px) {
+            .container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-icon">K</div>
+    <h1>Расчёт системы канализации</h1>
+    <span>СП 30.13330.2020</span>
+</div>
+
+<nav style="background:#161922;border-bottom:1px solid #2a2d3a;padding:6px 24px;display:flex;gap:4px">
+    <a href="index.html" style="color:#3b82f6;text-decoration:none;font-size:0.82rem;padding:6px 14px;border-radius:6px;background:#1e2130">Канализация (СП 30.13330)</a>
+    <a href="complex.html" style="color:#9ca3af;text-decoration:none;font-size:0.82rem;padding:6px 14px;border-radius:6px" onmouseover="this.style.color='#e0e0e0';this.style.background='#1e2130'" onmouseout="this.style.color='#9ca3af';this.style.background='transparent'">Жилой комплекс</a>
+</nav>
+
+<div class="container">
+    <!-- Входные данные: приборы -->
+    <div class="card">
+        <div class="card-title">Санитарные приборы</div>
+
+        <div class="form-group">
+            <label>Унитазы</label>
+            <input type="number" id="toilets" value="0" min="0">
+            <div class="hint">q₀ = 1.6 л/с, N = 0.1</div>
+        </div>
+
+        <div class="form-group">
+            <label>Раковины / умывальники</label>
+            <input type="number" id="sinks" value="0" min="0">
+            <div class="hint">q₀ = 0.12 л/с, N = 0.3</div>
+        </div>
+
+        <div class="form-group">
+            <label>Ванны</label>
+            <input type="number" id="baths" value="0" min="0">
+            <div class="hint">q₀ = 0.8 л/с, N = 0.28</div>
+        </div>
+
+        <div class="form-group">
+            <label>Душевые</label>
+            <input type="number" id="showers" value="0" min="0">
+            <div class="hint">q₀ = 0.2 л/с, N = 0.4</div>
+        </div>
+
+        <div class="form-group">
+            <label>Мойки кухонные</label>
+            <input type="number" id="kitchens" value="0" min="0">
+            <div class="hint">q₀ = 0.6 л/с, N = 0.12</div>
+        </div>
+
+        <div class="form-group">
+            <label>Стиральные машины</label>
+            <input type="number" id="washers" value="0" min="0">
+            <div class="hint">q₀ = 0.25 л/с, N = 0.25</div>
+        </div>
+    </div>
+
+    <!-- Параметры системы -->
+    <div class="card">
+        <div class="card-title">Параметры системы</div>
+
+        <div class="form-group">
+            <label>Материал труб</label>
+            <select id="material">
+                <option value="plastic">Пластик (ПВХ/ПП) — n=0.009</option>
+                <option value="cast_iron">Чугун — n=0.013</option>
+                <option value="ceramic">Керамика — n=0.014</option>
+                <option value="concrete">Бетон — n=0.015</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Тип здания</label>
+            <select id="building_type">
+                <option value="residential">Жилое здание</option>
+                <option value="public">Общественное здание</option>
+                <option value="industrial">Промышленное</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Длина участка, м</label>
+            <input type="number" id="length" value="10" min="0.1" step="0.1">
+        </div>
+
+        <div class="form-group">
+            <label>Перепад высот (необязательно), м</label>
+            <input type="number" id="height_diff" value="" min="0" step="0.01" placeholder="авто">
+            <div class="hint">Если пусто — уклон подберётся автоматически</div>
+        </div>
+
+        <button class="btn" onclick="calculate()">Рассчитать</button>
+    </div>
+
+    <!-- Результаты -->
+    <div class="results card hidden" id="results">
+        <div class="card-title">Результаты расчёта</div>
+        <div class="results-grid" id="results-grid"></div>
+    </div>
+
+    <!-- Статус -->
+    <div class="status-bar hidden" id="status-bar">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text"></span>
+    </div>
+
+    <!-- Таблица приборов -->
+    <div class="card table-wrap hidden" id="details">
+        <div class="card-title">Детализация по приборам</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Прибор</th>
+                    <th>Кол-во</th>
+                    <th>q₀, л/с</th>
+                    <th>N</th>
+                    <th>ΣN</th>
+                </tr>
+            </thead>
+            <tbody id="details-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+// Данные санитарных приборов по СП 30.13330
+const FIXTURES = {
+    toilets:  { name: 'Унитазы',          q0: 1.6,  N: 0.1  },
+    sinks:    { name: 'Раковины',          q0: 0.12, N: 0.3  },
+    baths:    { name: 'Ванны',             q0: 0.8,  N: 0.28 },
+    showers:  { name: 'Душевые',           q0: 0.2,  N: 0.4  },
+    kitchens: { name: 'Мойки кухонные',    q0: 0.6,  N: 0.12 },
+    washers:  { name: 'Стиральные машины', q0: 0.25, N: 0.25 }
+};
+
+// Коэффициент шероховатости Маннинга
+const ROUGHNESS = {
+    plastic: 0.009,
+    cast_iron: 0.013,
+    ceramic: 0.014,
+    concrete: 0.015
+};
+
+// Стандартные диаметры канализационных труб (мм)
+const DIAMETERS = [50, 100, 110, 150, 200, 250, 300];
+
+// Минимальные уклоны по СП (для данного диаметра, мм)
+const MIN_SLOPES = {
+    50:  0.035,
+    100: 0.020,
+    110: 0.020,
+    150: 0.010,
+    200: 0.008,
+    250: 0.007,
+    300: 0.005
+};
+
+// Максимальное наполнение h/d
+const MAX_FILLING = {
+    50:  0.5,
+    100: 0.5,
+    110: 0.5,
+    150: 0.6,
+    200: 0.6,
+    250: 0.7,
+    300: 0.7
+};
+
+// Таблица α (коэффициент одновременности) — приближение по СП
+function getAlpha(P) {
+    if (P <= 0) return 0;
+    // Приближённая формула для α по вероятности P и числу приборов
+    // Используем табличные значения для NP
+    const NP = P;
+    if (NP <= 0.015) return 0.200;
+    if (NP <= 0.020) return 0.230;
+    if (NP <= 0.030) return 0.270;
+    if (NP <= 0.040) return 0.310;
+    if (NP <= 0.050) return 0.340;
+    if (NP <= 0.060) return 0.370;
+    if (NP <= 0.080) return 0.410;
+    if (NP <= 0.100) return 0.450;
+    if (NP <= 0.150) return 0.530;
+    if (NP <= 0.200) return 0.600;
+    if (NP <= 0.300) return 0.720;
+    if (NP <= 0.500) return 0.900;
+    if (NP <= 0.800) return 1.100;
+    if (NP <= 1.000) return 1.260;
+    if (NP <= 1.500) return 1.590;
+    if (NP <= 2.000) return 1.880;
+    if (NP <= 3.000) return 2.400;
+    if (NP <= 4.000) return 2.880;
+    if (NP <= 5.000) return 3.320;
+    if (NP <= 6.000) return 3.740;
+    if (NP <= 8.000) return 4.530;
+    if (NP <= 10.00) return 5.280;
+    return 5.280 + (NP - 10) * 0.45;
+}
+
+// Расчёт площади и смоченного периметра при заданном наполнении (круглое сечение)
+function getHydraulics(d_m, filling) {
+    const r = d_m / 2;
+    const h = filling * d_m;
+    const theta = 2 * Math.acos(1 - h / r);
+    const A = (r * r / 2) * (theta - Math.sin(theta));
+    const P = r * theta;
+    const R = A / P;
+    return { A, P, R };
+}
+
+function calculate() {
+    // Собираем количество приборов
+    let totalN = 0;
+    let maxQ0 = 0;
+    let hasToilets = false;
+    const details = [];
+
+    for (const [id, data] of Object.entries(FIXTURES)) {
+        const count = parseInt(document.getElementById(id).value) || 0;
+        if (count > 0) {
+            const sumN = count * data.N;
+            totalN += sumN;
+            if (data.q0 > maxQ0) maxQ0 = data.q0;
+            if (id === 'toilets') hasToilets = true;
+            details.push({ ...data, count, sumN });
+        }
+    }
+
+    if (totalN === 0) {
+        alert('Укажите хотя бы один санитарный прибор');
+        return;
+    }
+
+    const material = document.getElementById('material').value;
+    const n = ROUGHNESS[material];
+    const length = parseFloat(document.getElementById('length').value) || 10;
+    const heightDiffInput = document.getElementById('height_diff').value;
+
+    // Расчёт расхода по СП: q = 5 * q₀ * α
+    const alpha = getAlpha(totalN);
+    const q_s = 5 * maxQ0 * alpha; // л/с
+    // Для стояков с унитазами: q_s + q_toilet
+    const q_total = hasToilets ? q_s + 1.6 : q_s;
+    const Q = q_total / 1000; // м³/с
+
+    // Подбор диаметра
+    let selectedD = null;
+    let selectedSlope = null;
+    let selectedV = null;
+    let selectedFilling = null;
+
+    for (const d_mm of DIAMETERS) {
+        // Минимальный диаметр: 100 мм если есть унитазы, иначе 50 мм
+        if (hasToilets && d_mm < 100) continue;
+
+        const d_m = d_mm / 1000;
+        const maxFill = MAX_FILLING[d_mm];
+        const minSlope = MIN_SLOPES[d_mm];
+        const slope = heightDiffInput ? (parseFloat(heightDiffInput) / length) : minSlope;
+
+        // Проверяем при максимальном допустимом наполнении
+        const hyd = getHydraulics(d_m, maxFill);
+        const v = (1 / n) * Math.pow(hyd.R, 2/3) * Math.pow(slope, 1/2);
+        const Qmax = v * hyd.A;
+
+        if (Qmax >= Q) {
+            // Найдём фактическое наполнение подбором
+            let lo = 0.01, hi = maxFill, fill = maxFill;
+            for (let iter = 0; iter < 50; iter++) {
+                fill = (lo + hi) / 2;
+                const h = getHydraulics(d_m, fill);
+                const vv = (1 / n) * Math.pow(h.R, 2/3) * Math.pow(slope, 1/2);
+                const qq = vv * h.A;
+                if (qq < Q) lo = fill;
+                else hi = fill;
+            }
+
+            const hydF = getHydraulics(d_m, fill);
+            const vFact = (1 / n) * Math.pow(hydF.R, 2/3) * Math.pow(slope, 1/2);
+
+            selectedD = d_mm;
+            selectedSlope = slope;
+            selectedV = vFact;
+            selectedFilling = fill;
+            break;
+        }
+    }
+
+    if (!selectedD) {
+        selectedD = DIAMETERS[DIAMETERS.length - 1];
+        selectedSlope = heightDiffInput ? (parseFloat(heightDiffInput) / length) : MIN_SLOPES[selectedD];
+        selectedV = 0;
+        selectedFilling = 1;
+    }
+
+    // Проверка самоочищения: v >= 0.7 м/с
+    const selfCleaning = selectedV >= 0.7;
+    // Проверка: v * sqrt(h/d) >= K (0.5 для пластика, 0.6 для остальных)
+    const K = material === 'plastic' ? 0.5 : 0.6;
+    const criterion = selectedV * Math.sqrt(selectedFilling);
+    const criterionOk = criterion >= K;
+
+    // Отрисовка результатов
+    const resultsEl = document.getElementById('results');
+    const gridEl = document.getElementById('results-grid');
+    resultsEl.classList.remove('hidden');
+
+    gridEl.innerHTML = `
+        <div class="result-item">
+            <div class="value">${q_total.toFixed(2)} <span class="unit">л/с</span></div>
+            <div class="label">Расчётный расход</div>
+        </div>
+        <div class="result-item">
+            <div class="value">${selectedD} <span class="unit">мм</span></div>
+            <div class="label">Диаметр трубы</div>
+        </div>
+        <div class="result-item ${selectedSlope >= MIN_SLOPES[selectedD] ? 'ok' : 'error'}">
+            <div class="value">${selectedSlope.toFixed(4)}</div>
+            <div class="label">Уклон (i)</div>
+        </div>
+        <div class="result-item ${selfCleaning ? 'ok' : 'warn'}">
+            <div class="value">${selectedV.toFixed(2)} <span class="unit">м/с</span></div>
+            <div class="label">Скорость потока</div>
+        </div>
+        <div class="result-item ${selectedFilling <= MAX_FILLING[selectedD] ? 'ok' : 'error'}">
+            <div class="value">${(selectedFilling * 100).toFixed(0)} <span class="unit">%</span></div>
+            <div class="label">Наполнение (h/d)</div>
+        </div>
+        <div class="result-item ${criterionOk ? 'ok' : 'warn'}">
+            <div class="value">${criterion.toFixed(2)}</div>
+            <div class="label">V·√(h/d) ≥ ${K}</div>
+        </div>
+    `;
+
+    // Статус
+    const statusBar = document.getElementById('status-bar');
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    statusBar.classList.remove('hidden');
+
+    if (selfCleaning && criterionOk && selectedFilling <= MAX_FILLING[selectedD]) {
+        statusDot.className = 'status-dot ok';
+        statusText.textContent = `Система соответствует требованиям СП 30.13330. Труба Ø${selectedD} мм, уклон ${selectedSlope.toFixed(4)}, самоочищение обеспечено.`;
+    } else if (!selfCleaning) {
+        statusDot.className = 'status-dot warn';
+        statusText.textContent = `Скорость ${selectedV.toFixed(2)} м/с < 0.7 м/с — самоочищение не обеспечено. Увеличьте уклон или уменьшите диаметр.`;
+    } else {
+        statusDot.className = 'status-dot warn';
+        statusText.textContent = `Условие V·√(h/d) ≥ ${K} не выполнено (${criterion.toFixed(2)}). Скорректируйте параметры.`;
+    }
+
+    // Таблица
+    const detailsEl = document.getElementById('details');
+    const tbody = document.getElementById('details-body');
+    detailsEl.classList.remove('hidden');
+
+    tbody.innerHTML = details.map(d => `
+        <tr>
+            <td>${d.name}</td>
+            <td>${d.count}</td>
+            <td>${d.q0}</td>
+            <td>${d.N}</td>
+            <td>${d.sumN.toFixed(2)}</td>
+        </tr>
+    `).join('') + `
+        <tr style="border-top:2px solid #3b82f6">
+            <td><strong>Итого</strong></td>
+            <td><strong>${details.reduce((s,d)=>s+d.count,0)}</strong></td>
+            <td><strong>${maxQ0}</strong> (макс)</td>
+            <td>—</td>
+            <td><strong>${totalN.toFixed(2)}</strong></td>
+        </tr>
+    `;
+}
+</script>
+
+</body>
+</html>
