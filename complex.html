@@ -1164,19 +1164,49 @@ function renderCalcK11() {
     window._k11Total = grandTotal;
 }
 
+function onMaterialChangeK2() {
+    // Сохраняем выбор
+    window._k2Material = document.getElementById('material-k2').value;
+    recalculate();
+}
+
 function renderCalcK2() {
-    const materialSel = document.getElementById('material-k1');
-    const material = materialSel ? materialSel.value : 'cast_iron';
+    const material = window._k2Material || 'cast_iron';
     const rows = material === 'cast_iron' ? MAT_K2_CAST_IRON : MAT_K2_PVC;
+
+    // Бренд: для К2 берём из своих селекторов (они в строке секции)
+    const brandIronEl = document.getElementById('brand-iron-k2');
+    const brandPvcEl = document.getElementById('brand-pvc-k2');
     const selectedBrand = material === 'cast_iron'
-        ? document.getElementById('brand-iron').value
-        : document.getElementById('brand-pvc').value;
+        ? (brandIronEl ? brandIronEl.value : 'Smart')
+        : (brandPvcEl ? brandPvcEl.value : 'Ostendorf');
 
     const body = document.getElementById('calc-k1-body');
 
-    // Разделитель секции К2
+    const selStyle = 'padding:3px 6px;background:#0f1117;border:1px solid #334155;border-radius:4px;color:#e0e0e0;font-size:0.72rem;font-family:inherit;';
+
+    const ironBrands = `<select id="brand-iron-k2" onchange="recalculate()" style="${selStyle}${material !== 'cast_iron' ? 'display:none' : ''}">
+        <option value="AVF">AVF</option><option value="Smart" ${selectedBrand==='Smart'?'selected':''}>Smart</option>
+        <option value="Con-Pipe">Con-Pipe</option><option value="Pam-Global">Pam-Global</option><option value="Halifax">Halifax</option>
+    </select>`;
+
+    const pvcBrands = `<select id="brand-pvc-k2" onchange="recalculate()" style="${selStyle}${material !== 'pvc' ? 'display:none' : ''}">
+        <option value="Контур-Уют">Контур-Уют</option><option value="РосТурПласт">РосТурПласт</option>
+        <option value="Ostendorf" ${selectedBrand==='Ostendorf'?'selected':''}>Ostendorf</option><option value="Pro Aqua">Pro Aqua</option>
+        <option value="Rehau">Rehau</option><option value="Синикон">Синикон</option>
+        <option value="Uponor">Uponor</option><option value="Valfex">Valfex</option>
+    </select>`;
+
+    // Разделитель секции К2 с выбором материала
     body.innerHTML += `<tr class="section-row">
-        <td colspan="${7 + buildings.length}">Система ливневая К2 (стояки ${material === 'cast_iron' ? 'чугунные' : 'НПВХ клеевые'})</td>
+        <td colspan="${7 + buildings.length}" style="padding:8px 6px">
+            Система ливневая К2 &nbsp;
+            <select id="material-k2" onchange="onMaterialChangeK2()" style="${selStyle}">
+                <option value="cast_iron" ${material==='cast_iron'?'selected':''}>Чугун (SML)</option>
+                <option value="pvc" ${material==='pvc'?'selected':''}>НПВХ</option>
+            </select> &nbsp;
+            ${ironBrands}${pvcBrands}
+        </td>
     </tr>`;
 
     let grandTotal = 0;
