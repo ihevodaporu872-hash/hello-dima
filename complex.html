@@ -500,7 +500,10 @@
             <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
                 <input type="text" id="price-search" placeholder="Поиск по названию или ID..." oninput="renderPriceTable()"
                     style="flex:1;min-width:200px;padding:8px 12px;background:#0f1117;border:1px solid #2a2d3a;border-radius:6px;color:#e0e0e0;font-size:0.85rem;font-family:inherit">
+                <button class="btn" onclick="document.getElementById('import-file').click()">Импорт прайс-листа</button>
+                <input type="file" id="import-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="importPriceList(this)">
             </div>
+            <div id="import-status" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:8px;font-size:0.82rem"></div>
             <div class="table-scroll">
                 <table class="data-table" id="price-table">
                     <thead id="price-head"></thead>
@@ -1116,6 +1119,94 @@ function renderPriceTable() {
             return `<td style="color:${v ? '#e0e0e0' : '#333'}">${v ? parseFloat(v).toLocaleString('ru-RU') + ' ₽' : '—'}</td>`;
         }).join('')}
     </tr>`).join('');
+}
+
+// === Импорт прайс-листа ===
+function showImportStatus(msg, isError) {
+    const el = document.getElementById('import-status');
+    el.style.display = '';
+    el.style.background = isError ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)';
+    el.style.color = isError ? '#ef4444' : '#10b981';
+    el.style.border = `1px solid ${isError ? '#ef4444' : '#10b981'}`;
+    el.textContent = msg;
+    if (!isError) setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+function parseCSV(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return [];
+    // Разделитель: ; или ,
+    const sep = lines[0].includes(';') ? ';' : ',';
+    const headers = lines[0].split(sep).map(h => h.trim().replace(/^["']|["']$/g, ''));
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+        const vals = lines[i].split(sep).map(v => v.trim().replace(/^["']|["']$/g, ''));
+        const obj = {};
+        headers.forEach((h, idx) => { obj[h] = vals[idx] || ''; });
+        rows.push(obj);
+    }
+    return rows;
+}
+
+async function importPriceList(input) {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+
+    if (!file.name.endsWith('.csv')) {
+        showImportStatus('Поддерживается только CSV формат. Сохраните Excel как CSV.', true);
+        return;
+    }
+
+    try {
+        const text = await file.text();
+        const rows = parseCSV(text);
+        if (!rows.length) {
+            showImportStatus('Файл пустой или неверный формат.', true);
+            return;
+        }
+
+        // Проверяем что есть колонка id
+        if (!rows[0].hasOwnProperty('id')) {
+            showImportStatus('В CSV нет колонки "id". Нужны колонки: id, Name, DN, price_smart, ...', true);
+            return;
+        }
+
+        showImportStatus(`Импорт ${rows.length} строк...`, false);
+
+        let updated = 0;
+        let inserted = 0;
+        let errors = 0;
+
+        for (const row of rows) {
+            if (!row.id) continue;
+            // Преобразуем числовые поля
+            const record = { id: row.id };
+            if (row.Name !== undefined) record.Name = row.Name;
+            if (row.DN !== undefined) record.DN = row.DN;
+            for (const key of Object.keys(row)) {
+                if (key.startsWith('price_')) {
+                    const num = parseFloat(row[key]);
+                    record[key] = isNaN(num) ? null : num;
+                }
+            }
+
+            const { error } = await sb.from('Master Catalog').upsert(record, { onConflict: 'id' });
+            if (error) {
+                console.error('Ошибка импорта строки', row.id, error);
+                errors++;
+            } else {
+                if (pricesData[row.id]) updated++; else inserted++;
+            }
+        }
+
+        await loadPrices();
+        renderPriceTable();
+        showImportStatus(`Готово! Добавлено: ${inserted}, обновлено: ${updated}${errors ? ', ошибок: ' + errors : ''}`, errors > 0);
+    } catch(e) {
+        console.error('Ошибка импорта:', e);
+        showImportStatus('Ошибка чтения файла: ' + e.message, true);
+    }
 }
 
 // === Инициализация ===
