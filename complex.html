@@ -517,16 +517,16 @@
     <!-- === Вкладка: Расчёт === -->
     <div id="tab-calc" style="display:none">
         <div class="card">
-            <div class="card-title">Расчёт системы хоз-быт К1</div>
-            <div style="display:flex;gap:16px;flex-wrap:wrap">
-                <div class="form-group-inline">
+            <div class="card-title">Расчёт инженерных систем</div>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+                <div class="form-group-inline" style="margin-bottom:0">
                     <label>Материал стояков</label>
                     <select id="material-k1" onchange="onMaterialChange()">
                         <option value="cast_iron">Чугун (SML)</option>
                         <option value="pvc">ПВХ</option>
                     </select>
                 </div>
-                <div class="form-group-inline" id="brand-group-iron">
+                <div class="form-group-inline" style="margin-bottom:0" id="brand-group-iron">
                     <label>Бренд</label>
                     <select id="brand-iron" onchange="recalculate()">
                         <option value="AVF">AVF</option>
@@ -536,7 +536,7 @@
                         <option value="Halifax">Halifax</option>
                     </select>
                 </div>
-                <div class="form-group-inline" id="brand-group-pvc" style="display:none">
+                <div class="form-group-inline" style="margin-bottom:0" id="brand-group-pvc" style="display:none">
                     <label>Бренд</label>
                     <select id="brand-pvc" onchange="recalculate()">
                         <option value="Контур-Уют">Контур-Уют</option>
@@ -551,51 +551,9 @@
                 </div>
             </div>
             <div class="table-scroll">
-                <table class="data-table">
+                <table class="data-table" id="calc-unified">
                     <thead id="calc-k1-head"></thead>
                     <tbody id="calc-k1-body"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Расчёт системы хоз-быт К1.1 Аренда</div>
-            <div style="display:flex;gap:16px;flex-wrap:wrap">
-                <div class="form-group-inline">
-                    <label>Материал водостока</label>
-                    <select id="material-k11" onchange="onMaterialChangeK11()">
-                        <option value="cast_iron">Чугун (SML)</option>
-                        <option value="pvc">ПВХ</option>
-                    </select>
-                </div>
-                <div class="form-group-inline" id="brand-group-iron-k11">
-                    <label>Бренд</label>
-                    <select id="brand-iron-k11" onchange="recalculate()">
-                        <option value="AVF">AVF</option>
-                        <option value="Smart" selected>Smart</option>
-                        <option value="Con-Pipe">Con-Pipe</option>
-                        <option value="Pam-Global">Pam-Global</option>
-                        <option value="Halifax">Halifax</option>
-                    </select>
-                </div>
-                <div class="form-group-inline" id="brand-group-pvc-k11" style="display:none">
-                    <label>Бренд</label>
-                    <select id="brand-pvc-k11" onchange="recalculate()">
-                        <option value="Контур-Уют">Контур-Уют</option>
-                        <option value="РосТурПласт">РосТурПласт</option>
-                        <option value="Ostendorf" selected>Ostendorf</option>
-                        <option value="Pro Aqua">Pro Aqua</option>
-                        <option value="Rehau">Rehau</option>
-                        <option value="Синикон">Синикон</option>
-                        <option value="Uponor">Uponor</option>
-                        <option value="Valfex">Valfex</option>
-                    </select>
-                </div>
-            </div>
-            <div class="table-scroll">
-                <table class="data-table">
-                    <thead id="calc-k11-head"></thead>
-                    <tbody id="calc-k11-body"></tbody>
                 </table>
             </div>
         </div>
@@ -920,7 +878,7 @@ function recalculate() {
     // Расчёт К1
     renderCalcK1();
 
-    // Расчёт К1.1
+    // Расчёт К1.1 (добавляется в ту же таблицу)
     renderCalcK11();
 }
 
@@ -928,13 +886,6 @@ function onMaterialChange() {
     const material = document.getElementById('material-k1').value;
     document.getElementById('brand-group-iron').style.display = material === 'cast_iron' ? '' : 'none';
     document.getElementById('brand-group-pvc').style.display = material === 'pvc' ? '' : 'none';
-    recalculate();
-}
-
-function onMaterialChangeK11() {
-    const material = document.getElementById('material-k11').value;
-    document.getElementById('brand-group-iron-k11').style.display = material === 'cast_iron' ? '' : 'none';
-    document.getElementById('brand-group-pvc-k11').style.display = material === 'pvc' ? '' : 'none';
     recalculate();
 }
 
@@ -1068,40 +1019,33 @@ function renderCalcK1() {
         </tr>`;
     }).join('');
 
-    // Итого стоимость
+    // Подитого К1
     body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
-        <td colspan="${5 + buildings.length + 1}"></td>
+        <td colspan="2" style="text-align:left;font-weight:700;color:#94a3b8;font-size:0.75rem">Итого К1</td>
+        <td colspan="${3 + buildings.length}"></td>
         <td style="font-weight:700;color:#10b981">${grandTotal ? grandTotal.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
     </tr>`;
+
+    window._k1Total = grandTotal;
 }
 
 function renderCalcK11() {
-    const materialSel = document.getElementById('material-k11');
+    const materialSel = document.getElementById('material-k1');
     const material = materialSel ? materialSel.value : 'cast_iron';
     const rows = material === 'cast_iron' ? MAT_K11_CAST_IRON : MAT_K11_PVC;
     const selectedBrand = material === 'cast_iron'
-        ? document.getElementById('brand-iron-k11').value
-        : document.getElementById('brand-pvc-k11').value;
+        ? document.getElementById('brand-iron').value
+        : document.getElementById('brand-pvc').value;
 
-    const head = document.getElementById('calc-k11-head');
-    const body = document.getElementById('calc-k11-body');
+    const body = document.getElementById('calc-k1-body');
 
-    head.innerHTML = `<tr>
-        <th style="width:30px;min-width:30px"></th>
-        <th style="text-align:left">Наименование</th>
-        <th>Ед.</th>
-        <th>ДН</th>
-        <th>Цена</th>
-        ${buildings.map(b => {
-            const exp = !!dnBldExpanded[b.id];
-            return `<th>К${b.name} <span class="dn-toggle${exp?' active':''}" onclick="toggleBldDn(${b.id})" title="Индивидуальный ДН">⚙</span></th>`;
-        }).join('')}
-        <th>Итого</th>
-        <th>Стоимость</th>
+    // Разделитель секции К1.1
+    body.innerHTML += `<tr class="section-row">
+        <td colspan="${7 + buildings.length}">Система хоз-быт К1.1 Аренда</td>
     </tr>`;
 
     let grandTotal = 0;
-    body.innerHTML = rows.map((row, i) => {
+    body.innerHTML += rows.map((row, i) => {
         const isRab = row.type === 'раб';
         const hasDn = !!(row.dns || row.dnPairs);
         const isPair = !!row.dnPairs;
@@ -1180,9 +1124,19 @@ function renderCalcK11() {
         </tr>`;
     }).join('');
 
+    // Подитого К1.1
     body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
-        <td colspan="${5 + buildings.length + 1}"></td>
+        <td colspan="2" style="text-align:left;font-weight:700;color:#94a3b8;font-size:0.75rem">Итого К1.1</td>
+        <td colspan="${3 + buildings.length}"></td>
         <td style="font-weight:700;color:#10b981">${grandTotal ? grandTotal.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+    </tr>`;
+
+    // Общий итого
+    const total = (window._k1Total || 0) + grandTotal;
+    body.innerHTML += `<tr style="border-top:3px solid #3b82f6;background:rgba(59,130,246,0.08)">
+        <td colspan="2" style="text-align:left;font-weight:700;color:#e0e0e0;font-size:0.85rem">ОБЩИЙ ИТОГО</td>
+        <td colspan="${3 + buildings.length}"></td>
+        <td style="font-weight:700;color:#10b981;font-size:0.95rem">${total ? total.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
     </tr>`;
 }
 
