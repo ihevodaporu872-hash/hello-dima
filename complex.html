@@ -1462,11 +1462,6 @@ function renderCalcK4() {
     </tr>`;
 
     if (!k4enabled) {
-        body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
-            <td colspan="2" style="text-align:left;font-weight:700;color:#94a3b8;font-size:0.75rem">Итого К4</td>
-            <td colspan="${4 + buildings.length}"></td>
-            <td style="font-weight:700;color:#6b7280">—</td>
-        </tr>`;
         window._k4Total = 0;
         return;
     }
@@ -1550,13 +1545,6 @@ function renderCalcK4() {
             <td style="color:#10b981;font-weight:600">${totalCost ? totalCost.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
         </tr>`;
     }).join('');
-
-    // Подитого К4
-    body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
-        <td colspan="2" style="text-align:left;font-weight:700;color:#94a3b8;font-size:0.75rem">Итого К4</td>
-        <td colspan="${4 + buildings.length}"></td>
-        <td style="font-weight:700;color:#10b981">${grandTotal ? grandTotal.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
-    </tr>`;
 
     window._k4Total = grandTotal;
 }
@@ -1642,18 +1630,18 @@ function renderDrainSections() {
     const t3 = renderDrainSection('Дренаж МОП', MAT_DRAIN_MOP, '_drainMopEnabled', '_drainMopQty', 'drain_mop');
 
     const drainTotal = (t1 || 0) + (t2 || 0) + (t3 || 0);
+    const k4Full = (window._k4Total || 0) + drainTotal;
     const body = document.getElementById('calc-k1-body');
 
-    if (drainTotal) {
-        body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
-            <td colspan="2" style="text-align:left;font-weight:700;color:#94a3b8;font-size:0.75rem">Итого дренаж</td>
-            <td colspan="${4 + buildings.length}"></td>
-            <td style="font-weight:700;color:#10b981">${drainTotal.toLocaleString('ru-RU') + ' ₽'}</td>
-        </tr>`;
-    }
+    // Итого К4 (дренаж блоков + дренажные подсекции)
+    body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
+        <td colspan="2" style="text-align:left;font-weight:700;color:#94a3b8;font-size:0.75rem">Итого К4</td>
+        <td colspan="${4 + buildings.length}"></td>
+        <td style="font-weight:700;color:#10b981">${k4Full ? k4Full.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+    </tr>`;
 
     // Общий итого
-    const total = (window._k1Total || 0) + (window._k11Total || 0) + (window._k2Total || 0) + (window._k4Total || 0) + drainTotal;
+    const total = (window._k1Total || 0) + (window._k11Total || 0) + (window._k2Total || 0) + k4Full;
     body.innerHTML += `<tr style="border-top:3px solid #3b82f6;background:rgba(59,130,246,0.08)">
         <td colspan="2" style="text-align:left;font-weight:700;color:#e0e0e0;font-size:0.85rem">ОБЩИЙ ИТОГО</td>
         <td colspan="${4 + buildings.length}"></td>
