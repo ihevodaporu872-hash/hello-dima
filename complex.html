@@ -442,6 +442,48 @@
                 </table>
             </div>
         </div>
+
+        <div class="card">
+            <div class="card-title">Расчёт системы внутреннего водостока К1.1</div>
+            <div style="display:flex;gap:16px;flex-wrap:wrap">
+                <div class="form-group-inline">
+                    <label>Материал водостока</label>
+                    <select id="material-k11" onchange="onMaterialChangeK11()">
+                        <option value="cast_iron">Чугун (SML)</option>
+                        <option value="pvc">ПВХ</option>
+                    </select>
+                </div>
+                <div class="form-group-inline" id="brand-group-iron-k11">
+                    <label>Бренд</label>
+                    <select id="brand-iron-k11" onchange="recalculate()">
+                        <option value="AVF">AVF</option>
+                        <option value="Smart" selected>Smart</option>
+                        <option value="Con-Pipe">Con-Pipe</option>
+                        <option value="Pam-Global">Pam-Global</option>
+                        <option value="Halifax">Halifax</option>
+                    </select>
+                </div>
+                <div class="form-group-inline" id="brand-group-pvc-k11" style="display:none">
+                    <label>Бренд</label>
+                    <select id="brand-pvc-k11" onchange="recalculate()">
+                        <option value="Контур-Уют">Контур-Уют</option>
+                        <option value="РосТурПласт">РосТурПласт</option>
+                        <option value="Ostendorf" selected>Ostendorf</option>
+                        <option value="Pro Aqua">Pro Aqua</option>
+                        <option value="Rehau">Rehau</option>
+                        <option value="Синикон">Синикон</option>
+                        <option value="Uponor">Uponor</option>
+                        <option value="Valfex">Valfex</option>
+                    </select>
+                </div>
+            </div>
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead id="calc-k11-head"></thead>
+                    <tbody id="calc-k11-body"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -573,6 +615,35 @@ const MAT_PVC = [
     { type:'мат', name:'Муфта противопожарная "ОГНЕЗА-ПМ/110"',        unit:'шт', priceId:'mufta_ogneza', calc: b => val('k1',b) * val('floors',b) },
 ];
 
+// === Материалы К1.1 (внутренний водосток) ===
+const MAT_K11_CAST_IRON = [
+    { type:'раб', name:'Монтаж трубы чугунной водосточной',              unit:'м',  priceId:'montazh_truby_chug', calc: b => val('funnels',b) * val('height',b) },
+    { type:'мат', name:'Труба чугунная SML L=3000 мм',   brand:'Smart', unit:'м',  dns:DN_SML, defaultDn:100, pricePer:3, priceKey: dn=>`truba_${dn}`, calc: b => val('funnels',b) * val('height',b) },
+    { type:'мат', name:'Отвод SML 88°',                  brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`otvod_${dn}(88)`, calc: b => val('funnels',b) * 2 },
+    { type:'мат', name:'Отвод SML 45°',                  brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`otvod_${dn}(45)`, calc: b => val('funnels',b) * 2 },
+    { type:'мат', name:'Ревизия чугун SML',              brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`rev_${dn}`, calc: b => Math.ceil(val('funnels',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
+    { type:'мат', name:'Заглушка Konfix',                brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`zaglushka_${dn}`, calc: b => val('funnels',b) },
+    { type:'мат', name:'Труба опорная',                  brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`opora_${dn}`, calc: b => Math.ceil(val('funnels',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
+    { type:'мат', name:'Кольцо опорное',                 brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`koltso_opornoe_${dn}`, calc: b => Math.ceil(val('funnels',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
+    { type:'мат', name:'Консоль опорная для чугунных труб', brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`konsol_opornaya_${dn}`, calc: b => Math.ceil(val('funnels',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
+    { type:'мат', name:'Хомут Rapid',                    brand:'Smart', unit:'шт', dns:DN_SML, defaultDn:100, priceKey: dn=>`rapid_${dn}`, calc: b => Math.ceil(val('funnels',b) * val('height',b) / (3 * val('floor_h',b) || 1)) * 2 },
+    { type:'мат', name:'Хомут для труб',                               unit:'шт', priceId:'khomut_trub', calc: b => Math.floor(val('funnels',b) * val('height',b) / 1.65) },
+    { type:'мат', name:'Цанга М12',                                    unit:'шт', priceId:'tsanga_m12', calc: b => Math.floor(val('funnels',b) * val('height',b) / 1.65) },
+];
+
+const MAT_K11_PVC = [
+    { type:'раб', name:'Монтаж труб ПВХ водосточных',                   unit:'м',  priceId:'montazh_truby_pvh', calc: b => val('funnels',b) * val('height',b) },
+    { type:'мат', name:'Труба ПВХ L=3000 мм',             brand:true,  unit:'м',  pricePer:3, priceId:'truba_pvh_110', calc: b => val('funnels',b) * val('height',b) },
+    { type:'мат', name:'Отвод ПВХ 88°',                   brand:true,  unit:'шт', priceId:'otvod_pvh_110(88)', calc: b => val('funnels',b) * 2 },
+    { type:'мат', name:'Отвод ПВХ 45°',                   brand:true,  unit:'шт', priceId:'otvod_pvh_110(45)', calc: b => val('funnels',b) * 2 },
+    { type:'мат', name:'Ревизия круглая ПВХ',             brand:true,  unit:'шт', priceId:'rev_pvh_110', calc: b => Math.ceil(val('funnels',b) * val('height',b) / (3 * val('floor_h',b) || 1)) },
+    { type:'мат', name:'Заглушка ПВХ',                    brand:true,  unit:'шт', priceId:'zaglushka_pvh_110', calc: b => val('funnels',b) },
+    { type:'мат', name:'Хомут для труб',                               unit:'шт', priceId:'khomut_trub_pvh', calc: b => Math.floor(val('funnels',b) * val('height',b) / 1.65) },
+    { type:'мат', name:'Цанга М12',                                    unit:'шт', priceId:'tsanga_m12_pvh', calc: b => Math.floor(val('funnels',b) * val('height',b) / 1.65) },
+    { type:'раб', name:'Монтаж муфты противопожарной (Огнеза)',         unit:'шт', priceId:'montazh_mufty', calc: b => val('funnels',b) * val('floors',b) },
+    { type:'мат', name:'Муфта противопожарная "ОГНЕЗА-ПМ/110"',        unit:'шт', priceId:'mufta_ogneza', calc: b => val('funnels',b) * val('floors',b) },
+];
+
 // === Сохранение в localStorage ===
 const STORAGE_KEY = 'complex_data';
 
@@ -666,12 +737,22 @@ function recalculate() {
 
     // Расчёт К1
     renderCalcK1();
+
+    // Расчёт К1.1
+    renderCalcK11();
 }
 
 function onMaterialChange() {
     const material = document.getElementById('material-k1').value;
     document.getElementById('brand-group-iron').style.display = material === 'cast_iron' ? '' : 'none';
     document.getElementById('brand-group-pvc').style.display = material === 'pvc' ? '' : 'none';
+    recalculate();
+}
+
+function onMaterialChangeK11() {
+    const material = document.getElementById('material-k11').value;
+    document.getElementById('brand-group-iron-k11').style.display = material === 'cast_iron' ? '' : 'none';
+    document.getElementById('brand-group-pvc-k11').style.display = material === 'pvc' ? '' : 'none';
     recalculate();
 }
 
@@ -806,6 +887,117 @@ function renderCalcK1() {
     }).join('');
 
     // Итого стоимость
+    body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
+        <td colspan="${5 + buildings.length + 1}"></td>
+        <td style="font-weight:700;color:#10b981">${grandTotal ? grandTotal.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+    </tr>`;
+}
+
+function renderCalcK11() {
+    const materialSel = document.getElementById('material-k11');
+    const material = materialSel ? materialSel.value : 'cast_iron';
+    const rows = material === 'cast_iron' ? MAT_K11_CAST_IRON : MAT_K11_PVC;
+    const selectedBrand = material === 'cast_iron'
+        ? document.getElementById('brand-iron-k11').value
+        : document.getElementById('brand-pvc-k11').value;
+
+    const head = document.getElementById('calc-k11-head');
+    const body = document.getElementById('calc-k11-body');
+
+    head.innerHTML = `<tr>
+        <th style="width:30px;min-width:30px"></th>
+        <th style="text-align:left">Наименование</th>
+        <th>Ед.</th>
+        <th>ДН</th>
+        <th>Цена</th>
+        ${buildings.map(b => {
+            const exp = !!dnBldExpanded[b.id];
+            return `<th>К${b.name} <span class="dn-toggle${exp?' active':''}" onclick="toggleBldDn(${b.id})" title="Индивидуальный ДН">⚙</span></th>`;
+        }).join('')}
+        <th>Итого</th>
+        <th>Стоимость</th>
+    </tr>`;
+
+    let grandTotal = 0;
+    body.innerHTML = rows.map((row, i) => {
+        const isRab = row.type === 'раб';
+        const hasDn = !!(row.dns || row.dnPairs);
+        const isPair = !!row.dnPairs;
+        const defVal = isPair ? row.defaultPair : row.defaultDn;
+        const mainKey = 'k11_' + material + '_main_' + i;
+        const mainDn = hasDn ? (selectedDns[mainKey] ?? defVal) : null;
+
+        let dnCell = '<td></td>';
+        if (hasDn && !isRab) {
+            const opts = isPair ? row.dnPairs : row.dns;
+            dnCell = `<td><select class="dn-select${isPair?' dn-select-pair':''}" onchange="onDnMain('k11_${material}',${i},this.value)">` +
+                opts.map(o => {
+                    const label = isPair ? o.replace('_','×') : o;
+                    return `<option value="${o}"${o==mainDn?' selected':''}>${label}</option>`;
+                }).join('') + `</select></td>`;
+        }
+
+        let totalQty = 0;
+        let totalCost = 0;
+
+        const cells = buildings.map(b => {
+            const qty = row.calc(b.id);
+            totalQty += qty;
+
+            const bldKey = 'k11_' + material + '_' + i + '_' + b.id;
+            const curDn = hasDn ? (selectedDns[bldKey] ?? mainDn) : null;
+            const expanded = hasDn && !!dnBldExpanded[b.id];
+
+            let priceId = row.priceId || '';
+            if (hasDn && row.priceKey) priceId = row.priceKey(curDn);
+
+            let price = getPrice(priceId, selectedBrand);
+            if (row.pricePer && price) price = +(price / row.pricePer).toFixed(2);
+            totalCost += price * qty;
+
+            let dnHtml = '';
+            if (expanded && hasDn) {
+                const opts = isPair ? row.dnPairs : row.dns;
+                dnHtml = `<select class="dn-mini${isPair?' dn-mini-pair':''}" onchange="onDnChange('${bldKey}',this.value)">` +
+                    opts.map(o => {
+                        const label = isPair ? o.replace('_','×') : o;
+                        return `<option value="${o}"${o==curDn?' selected':''}>${label}</option>`;
+                    }).join('') + `</select>`;
+            }
+
+            return expanded && hasDn
+                ? `<td><div style="display:inline-flex;align-items:baseline;gap:2px">${dnHtml} <span>${fmt(qty)}</span></div></td>`
+                : `<td>${fmt(qty)}</td>`;
+        }).join('');
+
+        totalCost = +totalCost.toFixed(2);
+        grandTotal += totalCost;
+
+        let basePrice = 0;
+        {
+            let pid = row.priceId || '';
+            if (hasDn && row.priceKey) pid = row.priceKey(mainDn);
+            basePrice = getPrice(pid, selectedBrand);
+            if (row.pricePer && basePrice) basePrice = +(basePrice / row.pricePer).toFixed(2);
+        }
+
+        const brandLabel = row.brand ? selectedBrand : '';
+        const nameText = brandLabel
+            ? `${row.name} <span style="color:#6b7280;font-size:0.68rem">${brandLabel}</span>`
+            : row.name;
+
+        return `<tr class="${isRab ? 'row-rab' : 'row-mat'}">
+            <td class="type-cell">${row.type}</td>
+            <td style="text-align:left;white-space:normal;max-width:200px">${nameText}</td>
+            <td class="unit-cell">${row.unit}</td>
+            ${hasDn ? dnCell : '<td></td>'}
+            <td style="color:#94a3b8;font-size:0.75rem">${basePrice ? basePrice.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+            ${cells}
+            <td class="total-cell">${fmt(totalQty)}</td>
+            <td style="color:#10b981;font-weight:600">${totalCost ? totalCost.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+        </tr>`;
+    }).join('');
+
     body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
         <td colspan="${5 + buildings.length + 1}"></td>
         <td style="font-weight:700;color:#10b981">${grandTotal ? grandTotal.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
