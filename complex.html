@@ -1417,52 +1417,60 @@ const WORK_ITEMS = [
     { id: 'montazh_mufty',       name: 'Монтаж муфты противопожарной',        unit: 'шт' },
 ];
 
+const CONTRACTORS = [
+    { key: 'work_1', name: 'Подрядчик 1' },
+    { key: 'work_2', name: 'Подрядчик 2' },
+    { key: 'work_3', name: 'Подрядчик 3' },
+    { key: 'work_4', name: 'Подрядчик 4' },
+    { key: 'work_5', name: 'Подрядчик 5' },
+    { key: 'work_6', name: 'Подрядчик 6' },
+];
+
+const WORK_STORAGE_KEY = 'complex_work_prices';
+
+function loadWorkPrices() {
+    try {
+        const raw = localStorage.getItem(WORK_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+    } catch(e) { return {}; }
+}
+
+function saveWorkPrices(data) {
+    localStorage.setItem(WORK_STORAGE_KEY, JSON.stringify(data));
+}
+
 function renderWorkTable() {
     const head = document.getElementById('work-head');
     const body = document.getElementById('work-body');
+    const workData = loadWorkPrices();
 
     head.innerHTML = `<tr>
         <th style="text-align:left">Наименование работы</th>
         <th>Ед. изм.</th>
-        <th>Расценка</th>
+        ${CONTRACTORS.map(c => `<th>${c.name}</th>`).join('')}
     </tr>`;
 
     body.innerHTML = WORK_ITEMS.map(w => {
-        const row = pricesData[w.id];
-        // Ищем любую ненулевую цену
-        let price = 0;
-        if (row) {
-            for (const col of Object.values(BRAND_COL)) {
-                if (row[col]) { price = parseFloat(row[col]); break; }
-            }
-        }
-
         return `<tr>
             <td style="text-align:left">${w.name}</td>
             <td class="unit-cell">${w.unit}</td>
-            <td>
-                <input type="number" value="${price || ''}" min="0" step="1" placeholder="0"
-                    style="width:100px;padding:4px 8px;background:#0f1117;border:1px solid #2a2d3a;border-radius:4px;color:#e0e0e0;font-size:0.82rem;text-align:center;font-family:inherit"
-                    onchange="saveWorkPrice('${w.id}', this.value)">
-                <span style="font-size:0.72rem;color:#6b7280"> ₽</span>
-            </td>
+            ${CONTRACTORS.map(c => {
+                const val = (workData[w.id] && workData[w.id][c.key]) || '';
+                return `<td>
+                    <input type="number" value="${val}" min="0" step="1" placeholder="0"
+                        style="width:90px;padding:4px 6px;background:#0f1117;border:1px solid #2a2d3a;border-radius:4px;color:#e0e0e0;font-size:0.82rem;text-align:center;font-family:inherit"
+                        onchange="onWorkPriceChange('${w.id}','${c.key}',this.value)">
+                </td>`;
+            }).join('')}
         </tr>`;
     }).join('');
 }
 
-async function saveWorkPrice(id, value) {
-    const price = parseFloat(value) || null;
-    // Сохраняем в колонку price_smart (как универсальную)
-    const { error } = await sb.from('Master Catalog').upsert(
-        { id, price_smart: price },
-        { onConflict: 'id' }
-    );
-    if (error) {
-        console.error('Ошибка сохранения расценки:', error);
-    } else {
-        await loadPrices();
-        recalculate();
-    }
+function onWorkPriceChange(workId, contractorKey, value) {
+    const workData = loadWorkPrices();
+    if (!workData[workId]) workData[workId] = {};
+    workData[workId][contractorKey] = parseFloat(value) || '';
+    saveWorkPrices(workData);
 }
 
 // === Импорт прайс-листа ===
