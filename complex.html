@@ -490,6 +490,7 @@
     <a href="#" class="active" onclick="switchTab('input', this); return false;">Исходные данные</a>
     <a href="#" onclick="switchTab('calc', this); return false;">Расчёт</a>
     <a href="#" onclick="switchTab('prices', this); return false;">Прайс-листы</a>
+    <a href="#" onclick="switchTab('work', this); return false;">Работа</a>
 </nav>
 
 <div class="container">
@@ -661,6 +662,19 @@
                 <table class="data-table" id="price-table">
                     <thead id="price-head"></thead>
                     <tbody id="price-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- === Вкладка: Работа === -->
+    <div id="tab-work" style="display:none">
+        <div class="card">
+            <div class="card-title">Расценки на работы</div>
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead id="work-head"></thead>
+                    <tbody id="work-body"></tbody>
                 </table>
             </div>
         </div>
@@ -1207,10 +1221,12 @@ function switchTab(tabId, linkEl) {
     document.getElementById('tab-input').style.display = tabId === 'input' ? '' : 'none';
     document.getElementById('tab-calc').style.display = tabId === 'calc' ? '' : 'none';
     document.getElementById('tab-prices').style.display = tabId === 'prices' ? '' : 'none';
+    document.getElementById('tab-work').style.display = tabId === 'work' ? '' : 'none';
     document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
     linkEl.classList.add('active');
     localStorage.setItem('complex_active_tab', tabId);
     if (tabId === 'prices') renderPriceTable();
+    if (tabId === 'work') renderWorkTable();
     recalculate();
 }
 
@@ -1393,6 +1409,62 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// === Работа (расценки) ===
+const WORK_ITEMS = [
+    { id: 'montazh_truby_chug',  name: 'Монтаж трубы чугунной',              unit: 'м' },
+    { id: 'montazh_truby_pvh',   name: 'Монтаж труб ПВХ',                    unit: 'м' },
+    { id: 'montazh_teploizol',   name: 'Монтаж теплоизоляции (гильзы)',       unit: 'шт' },
+    { id: 'montazh_mufty',       name: 'Монтаж муфты противопожарной',        unit: 'шт' },
+];
+
+function renderWorkTable() {
+    const head = document.getElementById('work-head');
+    const body = document.getElementById('work-body');
+
+    head.innerHTML = `<tr>
+        <th style="text-align:left">Наименование работы</th>
+        <th>Ед. изм.</th>
+        <th>Расценка</th>
+    </tr>`;
+
+    body.innerHTML = WORK_ITEMS.map(w => {
+        const row = pricesData[w.id];
+        // Ищем любую ненулевую цену
+        let price = 0;
+        if (row) {
+            for (const col of Object.values(BRAND_COL)) {
+                if (row[col]) { price = parseFloat(row[col]); break; }
+            }
+        }
+
+        return `<tr>
+            <td style="text-align:left">${w.name}</td>
+            <td class="unit-cell">${w.unit}</td>
+            <td>
+                <input type="number" value="${price || ''}" min="0" step="1" placeholder="0"
+                    style="width:100px;padding:4px 8px;background:#0f1117;border:1px solid #2a2d3a;border-radius:4px;color:#e0e0e0;font-size:0.82rem;text-align:center;font-family:inherit"
+                    onchange="saveWorkPrice('${w.id}', this.value)">
+                <span style="font-size:0.72rem;color:#6b7280"> ₽</span>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+async function saveWorkPrice(id, value) {
+    const price = parseFloat(value) || null;
+    // Сохраняем в колонку price_smart (как универсальную)
+    const { error } = await sb.from('Master Catalog').upsert(
+        { id, price_smart: price },
+        { onConflict: 'id' }
+    );
+    if (error) {
+        console.error('Ошибка сохранения расценки:', error);
+    } else {
+        await loadPrices();
+        recalculate();
+    }
+}
+
 // === Импорт прайс-листа ===
 let importRows = []; // временные данные из файла
 let importHeaders = [];
@@ -1551,7 +1623,7 @@ loadPrices();
 const savedTab = localStorage.getItem('complex_active_tab');
 if (savedTab && savedTab !== 'input') {
     const links = document.querySelectorAll('.nav a');
-    const idx = savedTab === 'calc' ? 1 : savedTab === 'prices' ? 2 : 0;
+    const idx = savedTab === 'calc' ? 1 : savedTab === 'prices' ? 2 : savedTab === 'work' ? 3 : 0;
     switchTab(savedTab, links[idx]);
 }
 </script>
