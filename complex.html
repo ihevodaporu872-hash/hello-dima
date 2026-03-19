@@ -1452,7 +1452,7 @@ function renderCalcK4() {
         <td colspan="${7 + buildings.length}" style="padding:8px 6px">
             <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px" onclick="event.stopPropagation()">
                 <input type="checkbox" ${k4enabled ? 'checked' : ''} onchange="window._k4Enabled=this.checked;recalculate()" style="accent-color:#3b82f6;width:16px;height:16px">
-                Система дренажа внутренних блоков К4
+                К4 Дренаж внутренних блоков
             </label> &nbsp;
             <select id="k4-variant" onchange="onK4VariantChange()" style="${selStyle}">
                 <option value="v1" ${variant==='v1'?'selected':''}>В составе К1</option>
@@ -1625,9 +1625,9 @@ function renderDrainSection(label, rows, enabledKey, qtyKey, sectionId) {
 }
 
 function renderDrainSections() {
-    const t1 = renderDrainSection('Дренаж лифтовых холлов', MAT_DRAIN_LIFT, '_drainLiftEnabled', '_drainLiftQty', 'drain_lift');
-    const t2 = renderDrainSection('Дренаж от коллекторов', MAT_DRAIN_COLLECTOR, '_drainCollEnabled', '_drainCollQty', 'drain_coll');
-    const t3 = renderDrainSection('Дренаж МОП', MAT_DRAIN_MOP, '_drainMopEnabled', '_drainMopQty', 'drain_mop');
+    const t1 = renderDrainSection('К4.1 Дренаж лифтовых холлов', MAT_DRAIN_LIFT, '_drainLiftEnabled', '_drainLiftQty', 'drain_lift');
+    const t2 = renderDrainSection('К4.2 Дренаж от коллекторов', MAT_DRAIN_COLLECTOR, '_drainCollEnabled', '_drainCollQty', 'drain_coll');
+    const t3 = renderDrainSection('К4.3 Дренаж МОП', MAT_DRAIN_MOP, '_drainMopEnabled', '_drainMopQty', 'drain_mop');
 
     const drainTotal = (t1 || 0) + (t2 || 0) + (t3 || 0);
     const k4Full = (window._k4Total || 0) + drainTotal;
