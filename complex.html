@@ -499,12 +499,6 @@
         <div class="card">
             <div class="card-title">Прайс-лист — Master Catalog</div>
             <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
-                <input type="text" id="price-search" placeholder="Наименование..." oninput="renderPriceTable()"
-                    style="flex:1;min-width:180px;padding:8px 12px;background:#0f1117;border:1px solid #2a2d3a;border-radius:6px;color:#e0e0e0;font-size:0.85rem;font-family:inherit">
-                <select id="price-filter-dn" onchange="renderPriceTable()"
-                    style="padding:8px 10px;background:#0f1117;border:1px solid #2a2d3a;border-radius:6px;color:#e0e0e0;font-size:0.85rem;font-family:inherit">
-                    <option value="">Все ДН</option>
-                </select>
                 <button class="btn" onclick="document.getElementById('import-file').click()">Импорт прайс-листа</button>
                 <input type="file" id="import-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="onFileSelected(this)">
             </div>
@@ -1134,37 +1128,54 @@ const BRAND_NAMES = {
 function renderPriceTable() {
     const head = document.getElementById('price-head');
     const body = document.getElementById('price-body');
-    const search = (document.getElementById('price-search').value || '').toLowerCase();
-    const dnFilter = document.getElementById('price-filter-dn').value;
 
     const allRows = Object.values(pricesData);
     if (!allRows.length) {
+        head.innerHTML = '';
         body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#6b7280;padding:24px">Загрузка цен...</td></tr>';
         return;
     }
 
-    // Заполняем список ДН (один раз или при изменении данных)
-    const dnSel = document.getElementById('price-filter-dn');
+    // Собираем уникальные ДН
     const allDns = [...new Set(allRows.map(r => r.DN).filter(d => d !== null && d !== undefined && d !== ''))].sort((a, b) => {
         const na = parseFloat(a), nb = parseFloat(b);
         if (!isNaN(na) && !isNaN(nb)) return na - nb;
         return String(a).localeCompare(String(b));
     });
-    if (dnSel.options.length <= 1) {
-        allDns.forEach(dn => { dnSel.innerHTML += `<option value="${dn}">${dn}</option>`; });
-    }
 
-    // Определяем колонки с ценами, которые реально есть в данных
+    // Определяем колонки с ценами
     const priceCols = Object.keys(BRAND_COL).map(brand => BRAND_COL[brand]).filter(col => {
         return allRows.some(r => r[col] !== null && r[col] !== undefined);
     });
+
+    const filterStyle = 'width:100%;padding:4px 6px;background:#0f1117;border:1px solid #2a2d3a;border-radius:4px;color:#e0e0e0;font-size:0.72rem;font-family:inherit;';
 
     head.innerHTML = `<tr>
         <th style="text-align:left">ID</th>
         <th style="text-align:left">Наименование</th>
         <th>ДН</th>
         ${priceCols.map(col => `<th>${BRAND_NAMES[col] || col}</th>`).join('')}
+    </tr>
+    <tr style="background:#0f1117">
+        <td></td>
+        <td><input type="text" id="price-search" placeholder="Фильтр..." oninput="renderPriceTable()" style="${filterStyle}text-align:left;"></td>
+        <td><select id="price-filter-dn" onchange="renderPriceTable()" style="${filterStyle}text-align:center;">
+            <option value="">Все</option>
+            ${allDns.map(dn => `<option value="${dn}">${dn}</option>`).join('')}
+        </select></td>
+        ${priceCols.map(() => '<td></td>').join('')}
     </tr>`;
+
+    // Восстанавливаем значения фильтров после перерисовки
+    const searchEl = document.getElementById('price-search');
+    const dnEl = document.getElementById('price-filter-dn');
+    if (window._priceSearch) searchEl.value = window._priceSearch;
+    if (window._priceDn) dnEl.value = window._priceDn;
+    searchEl.addEventListener('input', () => { window._priceSearch = searchEl.value; });
+    dnEl.addEventListener('change', () => { window._priceDn = dnEl.value; });
+
+    const search = (searchEl.value || '').toLowerCase();
+    const dnFilter = dnEl.value;
 
     const filtered = allRows.filter(r => {
         if (search) {
