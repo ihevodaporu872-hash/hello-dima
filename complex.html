@@ -1405,6 +1405,15 @@ function onMaterialChangeK4() {
 }
 
 function renderCalcK4() {
+    const body = document.getElementById('calc-k1-body');
+
+    // Общий заголовок секции К4
+    body.innerHTML += `<tr class="section-row">
+        <td colspan="${7 + buildings.length}" style="padding:10px 6px;font-size:0.85rem;letter-spacing:0.06em">
+            Система дренажной канализации К4
+        </td>
+    </tr>`;
+
     const variant = window._k4Variant || 'v1';
     const material = window._k4Material || 'cast_iron';
 
