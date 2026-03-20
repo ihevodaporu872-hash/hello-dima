@@ -1674,18 +1674,9 @@ function removeBuilding() {
 }
 
 function resetAll() {
-    buildings = [
-        { id: 1, name: '№1' },
-    ];
-    nextBuildingId = 2;
-    // Очищаем defaults чтобы поля были пустыми
-    for (const key in DEFAULTS) {
-        for (const bid in DEFAULTS[key]) {
-            DEFAULTS[key][bid] = '';
-        }
-    }
+    if (!confirm('Сбросить все данные к исходным значениям?')) return;
     localStorage.removeItem(STORAGE_KEY);
-    render();
+    location.reload();
 }
 
 // === Вкладки ===
