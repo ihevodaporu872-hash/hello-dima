@@ -2106,6 +2106,11 @@ async function runImport() {
 }
 
 // === Инициализация ===
+// Принудительная очистка битых данных (одноразово)
+if (!localStorage.getItem('complex_fix_v1')) {
+    localStorage.removeItem('complex_data');
+    localStorage.setItem('complex_fix_v1', '1');
+}
 loadData();
 loadDrainSettings();
 render();
