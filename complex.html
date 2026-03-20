@@ -919,12 +919,32 @@ function loadData() {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return;
         const saved = JSON.parse(raw);
+
+        // Проверяем не пустые ли данные (после старого сброса)
+        let hasAnyValue = false;
+        if (saved.values) {
+            for (const paramId in saved.values) {
+                for (const bid in saved.values[paramId]) {
+                    if (saved.values[paramId][bid] !== '' && saved.values[paramId][bid] !== 0) {
+                        hasAnyValue = true;
+                        break;
+                    }
+                }
+                if (hasAnyValue) break;
+            }
+        }
+
+        // Если все значения пустые — игнорируем сохранённые данные, используем DEFAULTS
+        if (!hasAnyValue) {
+            localStorage.removeItem(STORAGE_KEY);
+            return;
+        }
+
         if (saved.buildings && saved.buildings.length > 0) {
             buildings = saved.buildings;
             nextBuildingId = Math.max(...buildings.map(b => b.id)) + 1;
         }
         if (saved.values) {
-            // Перезаписываем DEFAULTS сохранёнными значениями
             for (const paramId in saved.values) {
                 if (DEFAULTS[paramId]) {
                     for (const bid in saved.values[paramId]) {
