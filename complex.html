@@ -518,37 +518,8 @@
     <div id="tab-calc" style="display:none">
         <div class="card">
             <div class="card-title">Расчёт инженерных систем</div>
-            <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
-                <div class="form-group-inline" style="margin-bottom:0">
-                    <label>Материал стояков</label>
-                    <select id="material-k1" onchange="onMaterialChange()">
-                        <option value="cast_iron">Чугун (SML)</option>
-                        <option value="pvc">ПВХ</option>
-                    </select>
-                </div>
-                <div class="form-group-inline" style="margin-bottom:0" id="brand-group-iron">
-                    <label>Бренд</label>
-                    <select id="brand-iron" onchange="recalculate()">
-                        <option value="AVF">AVF</option>
-                        <option value="Smart" selected>Smart</option>
-                        <option value="Con-Pipe">Con-Pipe</option>
-                        <option value="Pam-Global">Pam-Global</option>
-                        <option value="Halifax">Halifax</option>
-                    </select>
-                </div>
-                <div class="form-group-inline" id="brand-group-pvc" style="margin-bottom:0;display:none">
-                    <label>Бренд</label>
-                    <select id="brand-pvc" onchange="recalculate()">
-                        <option value="Контур-Уют">Контур-Уют</option>
-                        <option value="РосТурПласт">РосТурПласт</option>
-                        <option value="Ostendorf" selected>Ostendorf</option>
-                        <option value="Pro Aqua">Pro Aqua</option>
-                        <option value="Rehau">Rehau</option>
-                        <option value="Синикон">Синикон</option>
-                        <option value="Uponor">Uponor</option>
-                        <option value="Valfex">Valfex</option>
-                    </select>
-                </div>
+            <div style="margin-bottom:12px;font-size:0.78rem;color:#6b7280">
+                Материал и бренд выбираются для каждого корпуса во вкладке «Исходные данные»
             </div>
             <div class="table-scroll">
                 <table class="data-table" id="calc-unified">
@@ -664,6 +635,58 @@ const PARAMS = [
     { id: 's_above',   label: 'S надземной части',                                     unit: 'м²', step: 1 },
     { id: 's_below',   label: 'S подземной части',                                     unit: 'м²', step: 1 },
 ];
+
+// Материал по корпусам: { k1: { buildingId: 'cast_iron'|'pvc' }, k2: {...}, k4: {...} }
+const buildingMaterials = { k1: {}, k2: {}, k4: {} };
+// Бренд по корпусам: { k1: { buildingId: 'Smart' }, ... }
+const buildingBrands = { k1: {}, k2: {}, k4: {} };
+// Основной диаметр по корпусам: { k1: { buildingId: 100 }, ... }
+const buildingDns = { k1: {}, k2: {}, k4: {} };
+
+const IRON_BRANDS = ['AVF', 'Smart', 'Con-Pipe', 'Pam-Global', 'Halifax'];
+const PVC_BRANDS = ['Контур-Уют', 'РосТурПласт', 'Ostendorf', 'Pro Aqua', 'Rehau', 'Синикон', 'Uponor', 'Valfex'];
+
+function getBldMaterial(sys, bId) {
+    return (buildingMaterials[sys] && buildingMaterials[sys][bId]) || 'cast_iron';
+}
+
+function getBldBrand(sys, bId) {
+    const mat = getBldMaterial(sys, bId);
+    const stored = buildingBrands[sys] && buildingBrands[sys][bId];
+    if (stored) {
+        // Проверяем что бренд соответствует текущему материалу
+        const validBrands = mat === 'cast_iron' ? IRON_BRANDS : PVC_BRANDS;
+        if (validBrands.includes(stored)) return stored;
+    }
+    return mat === 'cast_iron' ? 'Smart' : 'Ostendorf';
+}
+
+function getBldDn(sys, bId) {
+    return (buildingDns[sys] && buildingDns[sys][bId]) || 100;
+}
+
+function onBldMaterialChange(sys, bId, value) {
+    if (!buildingMaterials[sys]) buildingMaterials[sys] = {};
+    buildingMaterials[sys][bId] = value;
+    // Сбрасываем бренд при смене материала
+    if (buildingBrands[sys]) delete buildingBrands[sys][bId];
+    saveData();
+    render(); // полный перерендер (обновить бренд-селекторы)
+}
+
+function onBldBrandChange(sys, bId, value) {
+    if (!buildingBrands[sys]) buildingBrands[sys] = {};
+    buildingBrands[sys][bId] = value;
+    saveData();
+    recalculate();
+}
+
+function onBldDnChange2(sys, bId, value) {
+    if (!buildingDns[sys]) buildingDns[sys] = {};
+    buildingDns[sys][bId] = parseInt(value) || 100;
+    saveData();
+    recalculate();
+}
 
 // Значения по умолчанию из таблицы пользователя { paramId: { buildingId: value } }
 const DEFAULTS = {
@@ -911,7 +934,7 @@ function saveData() {
             data[p.id][b.id] = val(p.id, b.id) || '';
         });
     });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ buildings, values: data }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ buildings, values: data, buildingMaterials, buildingBrands, buildingDns }));
 }
 
 function loadData() {
@@ -951,6 +974,21 @@ function loadData() {
                         DEFAULTS[paramId][bid] = saved.values[paramId][bid];
                     }
                 }
+            }
+        }
+        if (saved.buildingMaterials) {
+            for (const sys in saved.buildingMaterials) {
+                buildingMaterials[sys] = saved.buildingMaterials[sys] || {};
+            }
+        }
+        if (saved.buildingBrands) {
+            for (const sys in saved.buildingBrands) {
+                buildingBrands[sys] = saved.buildingBrands[sys] || {};
+            }
+        }
+        if (saved.buildingDns) {
+            for (const sys in saved.buildingDns) {
+                buildingDns[sys] = saved.buildingDns[sys] || {};
             }
         }
     } catch(e) { /* игнорируем ошибки парсинга */ }
@@ -998,6 +1036,60 @@ function renderInputTable() {
         <td class="total-cell" id="total_${p.id}">—</td>
     </tr>`).join('');
 
+    // Стиль для селекторов настроек
+    const cfgSel = 'width:100%;padding:4px 6px;background:#0f1117;border:1px solid #334155;border-radius:4px;color:#e0e0e0;font-size:0.75rem;font-family:inherit';
+
+    // Генерация блока настроек (материал + бренд + ДН) для одной системы
+    function renderConfigRows(sys, label) {
+        // --- Материал ---
+        let html = `<tr style="background:#1a1d2e">
+            <td style="font-weight:600;color:#3b82f6">${label} — материал</td>
+            <td class="unit-cell">—</td>
+            ${buildings.map(b => {
+                const cur = getBldMaterial(sys, b.id);
+                return `<td><select onchange="onBldMaterialChange('${sys}',${b.id},this.value)" style="${cfgSel}">
+                    <option value="cast_iron" ${cur==='cast_iron'?'selected':''}>Чугун</option>
+                    <option value="pvc" ${cur==='pvc'?'selected':''}>ПВХ</option>
+                </select></td>`;
+            }).join('')}
+            <td class="total-cell">—</td>
+        </tr>`;
+
+        // --- Бренд ---
+        html += `<tr style="background:#1a1d2e">
+            <td style="color:#94a3b8;padding-left:24px">${label} — бренд</td>
+            <td class="unit-cell">—</td>
+            ${buildings.map(b => {
+                const mat = getBldMaterial(sys, b.id);
+                const brand = getBldBrand(sys, b.id);
+                const opts = mat === 'cast_iron' ? IRON_BRANDS : PVC_BRANDS;
+                return `<td><select onchange="onBldBrandChange('${sys}',${b.id},this.value)" style="${cfgSel}">
+                    ${opts.map(o => `<option value="${o}" ${brand===o?'selected':''}>${o}</option>`).join('')}
+                </select></td>`;
+            }).join('')}
+            <td class="total-cell">—</td>
+        </tr>`;
+
+        // --- Диаметр ---
+        html += `<tr style="background:#1a1d2e">
+            <td style="color:#94a3b8;padding-left:24px">${label} — диаметр</td>
+            <td class="unit-cell">мм</td>
+            ${buildings.map(b => {
+                const dn = getBldDn(sys, b.id);
+                return `<td><select onchange="onBldDnChange2('${sys}',${b.id},this.value)" style="${cfgSel}">
+                    ${DN_SML.map(d => `<option value="${d}" ${dn===d?'selected':''}>${d}</option>`).join('')}
+                </select></td>`;
+            }).join('')}
+            <td class="total-cell">—</td>
+        </tr>`;
+
+        return html;
+    }
+
+    body.innerHTML += renderConfigRows('k1', 'К1');
+    body.innerHTML += renderConfigRows('k2', 'К2');
+    body.innerHTML += renderConfigRows('k4', 'К4');
+
 }
 
 function recalculate() {
@@ -1027,13 +1119,6 @@ function recalculate() {
     renderDrainSections();
 }
 
-function onMaterialChange() {
-    const material = document.getElementById('material-k1').value;
-    document.getElementById('brand-group-iron').style.display = material === 'cast_iron' ? '' : 'none';
-    document.getElementById('brand-group-pvc').style.display = material === 'pvc' ? '' : 'none';
-    recalculate();
-}
-
 function onDnChange(key, value) {
     selectedDns[key] = isNaN(+value) ? value : +value;
     recalculate();
@@ -1055,14 +1140,137 @@ function toggleBldDn(bId) {
     recalculate();
 }
 
-function renderCalcK1() {
-    const materialSel = document.getElementById('material-k1');
-    const material = materialSel ? materialSel.value : 'cast_iron';
-    const rows = material === 'cast_iron' ? MAT_CAST_IRON : MAT_PVC;
-    const selectedBrand = material === 'cast_iron'
-        ? document.getElementById('brand-iron').value
-        : document.getElementById('brand-pvc').value;
+// Получить ДН корпуса для строки материала
+// isPair: true → вернуть пару 'dn_dn', иначе число
+function resolveBldDn(sys, bId, row, dnPrefix, i) {
+    const hasDn = !!(row.dns || row.dnPairs);
+    if (!hasDn) return null;
+    const isPair = !!row.dnPairs;
 
+    // 1. Индивидуальный override для этой строки+корпуса
+    const bldKey = dnPrefix + '_' + i + '_' + bId;
+    if (selectedDns[bldKey] !== undefined) return selectedDns[bldKey];
+
+    // 2. Общий override для этой строки (main)
+    const mainKey = dnPrefix + '_main_' + i;
+    if (selectedDns[mainKey] !== undefined) return selectedDns[mainKey];
+
+    // 3. Основной ДН корпуса из исходных данных
+    const bldDn = getBldDn(sys, bId);
+    if (isPair) {
+        // Подбираем ближайшую валидную пару dn_dn
+        const pair = bldDn + '_' + bldDn;
+        if (row.dnPairs.includes(pair)) return pair;
+        // Если нет точной пары — fallback на defaultPair
+        return row.defaultPair;
+    }
+    // Одиночный ДН — проверяем что он есть в допустимых
+    if (row.dns && row.dns.includes(bldDn)) return bldDn;
+    return row.defaultDn;
+}
+
+// Универсальный рендер строк для одной группы материала
+// Возвращает { html, total }
+function renderMatGroup(opts) {
+    const { system, material, rows, dnPrefix, groupBuildings } = opts;
+    const allBuildings = buildings;
+    const groupIds = new Set(groupBuildings.map(b => b.id));
+
+    let grandTotal = 0;
+    const html = rows.map((row, i) => {
+        const isRab = row.type === 'раб';
+        const hasDn = !!(row.dns || row.dnPairs);
+        const isPair = !!row.dnPairs;
+
+        // ДН колонка — показываем ДН первого корпуса в группе (как представительный)
+        let dnCell = '<td></td>';
+        if (hasDn && !isRab) {
+            const reprDn = resolveBldDn(system, groupBuildings[0].id, row, dnPrefix, i);
+            const label = isPair ? String(reprDn).replace('_','×') : reprDn;
+            dnCell = `<td style="color:#94a3b8;font-size:0.75rem">${label}</td>`;
+        }
+
+        let totalQty = 0;
+        let totalCost = 0;
+        let reprPrice = 0; // цена для отображения (первый корпус)
+
+        const cells = allBuildings.map(b => {
+            if (!groupIds.has(b.id)) return `<td style="color:#334155">—</td>`;
+
+            const qty = row.calc(b.id);
+            totalQty += qty;
+
+            const brand = getBldBrand(system, b.id);
+            const curDn = resolveBldDn(system, b.id, row, dnPrefix, i);
+            const expanded = hasDn && !!dnBldExpanded[b.id];
+
+            let priceId = row.priceId || '';
+            if (hasDn && row.priceKey) priceId = row.priceKey(curDn);
+
+            let price = getPrice(priceId, brand);
+            if (row.pricePer && price) price = +(price / row.pricePer).toFixed(2);
+            totalCost += price * qty;
+
+            // Запомним цену первого корпуса для колонки "Цена"
+            if (b.id === groupBuildings[0].id) reprPrice = price;
+
+            // Индивидуальный ДН (⚙ раскрыт)
+            let dnHtml = '';
+            if (expanded && hasDn) {
+                const bldKey = dnPrefix + '_' + i + '_' + b.id;
+                const opts2 = isPair ? row.dnPairs : row.dns;
+                dnHtml = `<select class="dn-mini${isPair?' dn-mini-pair':''}" onchange="onDnChange('${bldKey}',this.value)">` +
+                    opts2.map(o => {
+                        const lbl = isPair ? o.replace('_','×') : o;
+                        return `<option value="${o}"${o==curDn?' selected':''}>${lbl}</option>`;
+                    }).join('') + `</select>`;
+            }
+
+            return expanded && hasDn
+                ? `<td><div style="display:inline-flex;align-items:baseline;gap:2px">${dnHtml} <span>${fmt(qty)}</span></div></td>`
+                : `<td>${fmt(qty)}</td>`;
+        }).join('');
+
+        totalCost = +totalCost.toFixed(2);
+        grandTotal += totalCost;
+
+        // Бренд-лейбл: если у всех корпусов одинаковый — показать, иначе "разные"
+        let brandLabel = '';
+        if (row.brand) {
+            const brands = [...new Set(groupBuildings.map(b => getBldBrand(system, b.id)))];
+            brandLabel = brands.length === 1 ? brands[0] : 'разные';
+        }
+        const nameText = brandLabel
+            ? `${row.name} <span style="color:#6b7280;font-size:0.68rem">${brandLabel}</span>`
+            : row.name;
+
+        return `<tr class="${isRab ? 'row-rab' : 'row-mat'}">
+            <td class="type-cell">${row.type}</td>
+            <td style="text-align:left;white-space:normal;max-width:200px">${nameText}</td>
+            <td class="unit-cell">${row.unit}</td>
+            ${hasDn ? dnCell : '<td></td>'}
+            <td style="color:#94a3b8;font-size:0.75rem">${reprPrice ? reprPrice.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+            ${cells}
+            <td class="total-cell">${fmt(totalQty)}</td>
+            <td style="color:#10b981;font-weight:600">${totalCost ? totalCost.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+        </tr>`;
+    }).join('');
+
+    return { html, total: grandTotal };
+}
+
+// Группировка корпусов по материалу для системы
+function groupByMaterial(sys) {
+    const groups = { cast_iron: [], pvc: [] };
+    buildings.forEach(b => {
+        const m = getBldMaterial(sys, b.id);
+        groups[m].push(b);
+    });
+    return groups;
+}
+
+
+function renderCalcK1() {
     const head = document.getElementById('calc-k1-head');
     const body = document.getElementById('calc-k1-body');
 
@@ -1080,89 +1288,35 @@ function renderCalcK1() {
         <th>Стоимость</th>
     </tr>`;
 
+    const groups = groupByMaterial('k1');
     let grandTotal = 0;
-    body.innerHTML = rows.map((row, i) => {
-        const isRab = row.type === 'раб';
-        const hasDn = !!(row.dns || row.dnPairs);
-        const isPair = !!row.dnPairs;
-        const defVal = isPair ? row.defaultPair : row.defaultDn;
-        const mainKey = material + '_main_' + i;
-        const mainDn = hasDn ? (selectedDns[mainKey] ?? defVal) : null;
+    let bodyHtml = '';
 
-        // Ячейка ДН (общий селектор слева)
-        let dnCell = '<td></td>';
-        if (hasDn && !isRab) {
-            const opts = isPair ? row.dnPairs : row.dns;
-            dnCell = `<td><select class="dn-select${isPair?' dn-select-pair':''}" onchange="onDnMain('${material}',${i},this.value)">` +
-                opts.map(o => {
-                    const label = isPair ? o.replace('_','×') : o;
-                    return `<option value="${o}"${o==mainDn?' selected':''}>${label}</option>`;
-                }).join('') + `</select></td>`;
-        }
+    const matLabels = { cast_iron: 'Чугун (SML)', pvc: 'ПВХ' };
 
-        let totalQty = 0;
-        let totalCost = 0;
+    for (const [material, grpBlds] of Object.entries(groups)) {
+        if (grpBlds.length === 0) continue;
 
-        const cells = buildings.map(b => {
-            const qty = row.calc(b.id);
-            totalQty += qty;
+        const rows = material === 'cast_iron' ? MAT_CAST_IRON : MAT_PVC;
+        const bldNames = grpBlds.map(b => 'К' + b.name).join(', ');
 
-            // ДН: индивидуальный для корпуса или общий
-            const bldKey = material + '_' + i + '_' + b.id;
-            const curDn = hasDn ? (selectedDns[bldKey] ?? mainDn) : null;
-            const expanded = hasDn && !!dnBldExpanded[b.id];
-
-            let priceId = row.priceId || '';
-            if (hasDn && row.priceKey) priceId = row.priceKey(curDn);
-
-            let price = getPrice(priceId, selectedBrand);
-            if (row.pricePer && price) price = +(price / row.pricePer).toFixed(2);
-            totalCost += price * qty;
-
-            // Селектор ДН (показывается только если ⚙ раскрыт для корпуса)
-            let dnHtml = '';
-            if (expanded && hasDn) {
-                const opts = isPair ? row.dnPairs : row.dns;
-                dnHtml = `<select class="dn-mini${isPair?' dn-mini-pair':''}" onchange="onDnChange('${bldKey}',this.value)">` +
-                    opts.map(o => {
-                        const label = isPair ? o.replace('_','×') : o;
-                        return `<option value="${o}"${o==curDn?' selected':''}>${label}</option>`;
-                    }).join('') + `</select>`;
-            }
-
-            return expanded && hasDn
-                ? `<td><div style="display:inline-flex;align-items:baseline;gap:2px">${dnHtml} <span>${fmt(qty)}</span></div></td>`
-                : `<td>${fmt(qty)}</td>`;
-        }).join('');
-
-        totalCost = +totalCost.toFixed(2);
-        grandTotal += totalCost;
-
-        // Цена за единицу (по основному ДН)
-        let basePrice = 0;
-        {
-            let pid = row.priceId || '';
-            if (hasDn && row.priceKey) pid = row.priceKey(mainDn);
-            basePrice = getPrice(pid, selectedBrand);
-            if (row.pricePer && basePrice) basePrice = +(basePrice / row.pricePer).toFixed(2);
-        }
-
-        const brandLabel = row.brand ? selectedBrand : '';
-        const nameText = brandLabel
-            ? `${row.name} <span style="color:#6b7280;font-size:0.68rem">${brandLabel}</span>`
-            : row.name;
-
-        return `<tr class="${isRab ? 'row-rab' : 'row-mat'}">
-            <td class="type-cell">${row.type}</td>
-            <td style="text-align:left;white-space:normal;max-width:200px">${nameText}</td>
-            <td class="unit-cell">${row.unit}</td>
-            ${hasDn ? dnCell : '<td></td>'}
-            <td style="color:#94a3b8;font-size:0.75rem">${basePrice ? basePrice.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
-            ${cells}
-            <td class="total-cell">${fmt(totalQty)}</td>
-            <td style="color:#10b981;font-weight:600">${totalCost ? totalCost.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+        // Подзаголовок материала
+        bodyHtml += `<tr class="section-row">
+            <td colspan="${7 + buildings.length}" style="padding:6px;font-size:0.78rem">
+                К1 — ${matLabels[material]} <span style="color:#6b7280;font-size:0.7rem">(${bldNames})</span>
+            </td>
         </tr>`;
-    }).join('');
+
+        const result = renderMatGroup({
+            system: 'k1', material, rows,
+            dnPrefix: material,
+            groupBuildings: grpBlds,
+        });
+        bodyHtml += result.html;
+        grandTotal += result.total;
+    }
+
+    body.innerHTML = bodyHtml;
 
     // Подитого К1
     body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
@@ -1175,99 +1329,40 @@ function renderCalcK1() {
 }
 
 function renderCalcK11() {
-    const materialSel = document.getElementById('material-k1');
-    const material = materialSel ? materialSel.value : 'cast_iron';
-    const rows = material === 'cast_iron' ? MAT_K11_CAST_IRON : MAT_K11_PVC;
-    const selectedBrand = material === 'cast_iron'
-        ? document.getElementById('brand-iron').value
-        : document.getElementById('brand-pvc').value;
-
     const body = document.getElementById('calc-k1-body');
+    const groups = groupByMaterial('k1'); // K1.1 использует тот же материал что и К1
+    const matLabels = { cast_iron: 'Чугун (SML)', pvc: 'ПВХ' };
 
-    // Разделитель секции К1.1
+    let grandTotal = 0;
+
+    // Общий разделитель К1.1
     body.innerHTML += `<tr class="section-row">
         <td colspan="${7 + buildings.length}">Система хоз-быт К1.1 Аренда</td>
     </tr>`;
 
-    let grandTotal = 0;
-    body.innerHTML += rows.map((row, i) => {
-        const isRab = row.type === 'раб';
-        const hasDn = !!(row.dns || row.dnPairs);
-        const isPair = !!row.dnPairs;
-        const defVal = isPair ? row.defaultPair : row.defaultDn;
-        const mainKey = 'k11_' + material + '_main_' + i;
-        const mainDn = hasDn ? (selectedDns[mainKey] ?? defVal) : null;
+    for (const [material, grpBlds] of Object.entries(groups)) {
+        if (grpBlds.length === 0) continue;
 
-        let dnCell = '<td></td>';
-        if (hasDn && !isRab) {
-            const opts = isPair ? row.dnPairs : row.dns;
-            dnCell = `<td><select class="dn-select${isPair?' dn-select-pair':''}" onchange="onDnMain('k11_${material}',${i},this.value)">` +
-                opts.map(o => {
-                    const label = isPair ? o.replace('_','×') : o;
-                    return `<option value="${o}"${o==mainDn?' selected':''}>${label}</option>`;
-                }).join('') + `</select></td>`;
+        const rows = material === 'cast_iron' ? MAT_K11_CAST_IRON : MAT_K11_PVC;
+
+        // Подзаголовок материала (если оба материала используются)
+        if (groups.cast_iron.length > 0 && groups.pvc.length > 0) {
+            const bldNames = grpBlds.map(b => 'К' + b.name).join(', ');
+            body.innerHTML += `<tr style="background:#1a1d2e">
+                <td colspan="${7 + buildings.length}" style="padding:4px 6px;font-size:0.72rem;color:#6b7280">
+                    К1.1 — ${matLabels[material]} (${bldNames})
+                </td>
+            </tr>`;
         }
 
-        let totalQty = 0;
-        let totalCost = 0;
-
-        const cells = buildings.map(b => {
-            const qty = row.calc(b.id);
-            totalQty += qty;
-
-            const bldKey = 'k11_' + material + '_' + i + '_' + b.id;
-            const curDn = hasDn ? (selectedDns[bldKey] ?? mainDn) : null;
-            const expanded = hasDn && !!dnBldExpanded[b.id];
-
-            let priceId = row.priceId || '';
-            if (hasDn && row.priceKey) priceId = row.priceKey(curDn);
-
-            let price = getPrice(priceId, selectedBrand);
-            if (row.pricePer && price) price = +(price / row.pricePer).toFixed(2);
-            totalCost += price * qty;
-
-            let dnHtml = '';
-            if (expanded && hasDn) {
-                const opts = isPair ? row.dnPairs : row.dns;
-                dnHtml = `<select class="dn-mini${isPair?' dn-mini-pair':''}" onchange="onDnChange('${bldKey}',this.value)">` +
-                    opts.map(o => {
-                        const label = isPair ? o.replace('_','×') : o;
-                        return `<option value="${o}"${o==curDn?' selected':''}>${label}</option>`;
-                    }).join('') + `</select>`;
-            }
-
-            return expanded && hasDn
-                ? `<td><div style="display:inline-flex;align-items:baseline;gap:2px">${dnHtml} <span>${fmt(qty)}</span></div></td>`
-                : `<td>${fmt(qty)}</td>`;
-        }).join('');
-
-        totalCost = +totalCost.toFixed(2);
-        grandTotal += totalCost;
-
-        let basePrice = 0;
-        {
-            let pid = row.priceId || '';
-            if (hasDn && row.priceKey) pid = row.priceKey(mainDn);
-            basePrice = getPrice(pid, selectedBrand);
-            if (row.pricePer && basePrice) basePrice = +(basePrice / row.pricePer).toFixed(2);
-        }
-
-        const brandLabel = row.brand ? selectedBrand : '';
-        const nameText = brandLabel
-            ? `${row.name} <span style="color:#6b7280;font-size:0.68rem">${brandLabel}</span>`
-            : row.name;
-
-        return `<tr class="${isRab ? 'row-rab' : 'row-mat'}">
-            <td class="type-cell">${row.type}</td>
-            <td style="text-align:left;white-space:normal;max-width:200px">${nameText}</td>
-            <td class="unit-cell">${row.unit}</td>
-            ${hasDn ? dnCell : '<td></td>'}
-            <td style="color:#94a3b8;font-size:0.75rem">${basePrice ? basePrice.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
-            ${cells}
-            <td class="total-cell">${fmt(totalQty)}</td>
-            <td style="color:#10b981;font-weight:600">${totalCost ? totalCost.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
-        </tr>`;
-    }).join('');
+        const result = renderMatGroup({
+            system: 'k1', material, rows,
+            dnPrefix: 'k11_' + material,
+            groupBuildings: grpBlds,
+        });
+        body.innerHTML += result.html;
+        grandTotal += result.total;
+    }
 
     // Подитого К1.1
     body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
@@ -1279,130 +1374,41 @@ function renderCalcK11() {
     window._k11Total = grandTotal;
 }
 
-function onMaterialChangeK2() {
-    // Сохраняем выбор
-    window._k2Material = document.getElementById('material-k2').value;
-    recalculate();
-}
-
 function renderCalcK2() {
-    const material = window._k2Material || 'cast_iron';
-    const rows = material === 'cast_iron' ? MAT_K2_CAST_IRON : MAT_K2_PVC;
-
-    // Бренд: для К2 берём из своих селекторов (они в строке секции)
-    const brandIronEl = document.getElementById('brand-iron-k2');
-    const brandPvcEl = document.getElementById('brand-pvc-k2');
-    const selectedBrand = material === 'cast_iron'
-        ? (brandIronEl ? brandIronEl.value : 'Smart')
-        : (brandPvcEl ? brandPvcEl.value : 'Ostendorf');
-
     const body = document.getElementById('calc-k1-body');
+    const groups = groupByMaterial('k2');
+    const matLabels = { cast_iron: 'Чугун (SML)', pvc: 'НПВХ' };
 
-    const selStyle = 'padding:3px 6px;background:#0f1117;border:1px solid #334155;border-radius:4px;color:#e0e0e0;font-size:0.72rem;font-family:inherit;';
-
-    const ironBrands = `<select id="brand-iron-k2" onchange="recalculate()" style="${selStyle}${material !== 'cast_iron' ? 'display:none' : ''}">
-        <option value="AVF">AVF</option><option value="Smart" ${selectedBrand==='Smart'?'selected':''}>Smart</option>
-        <option value="Con-Pipe">Con-Pipe</option><option value="Pam-Global">Pam-Global</option><option value="Halifax">Halifax</option>
-    </select>`;
-
-    const pvcBrands = `<select id="brand-pvc-k2" onchange="recalculate()" style="${selStyle}${material !== 'pvc' ? 'display:none' : ''}">
-        <option value="Контур-Уют">Контур-Уют</option><option value="РосТурПласт">РосТурПласт</option>
-        <option value="Ostendorf" ${selectedBrand==='Ostendorf'?'selected':''}>Ostendorf</option><option value="Pro Aqua">Pro Aqua</option>
-        <option value="Rehau">Rehau</option><option value="Синикон">Синикон</option>
-        <option value="Uponor">Uponor</option><option value="Valfex">Valfex</option>
-    </select>`;
-
-    // Разделитель секции К2 с выбором материала
+    // Общий заголовок К2
     body.innerHTML += `<tr class="section-row">
         <td colspan="${7 + buildings.length}" style="padding:8px 6px">
-            Система ливневая К2 &nbsp;
-            <select id="material-k2" onchange="onMaterialChangeK2()" style="${selStyle}">
-                <option value="cast_iron" ${material==='cast_iron'?'selected':''}>Чугун (SML)</option>
-                <option value="pvc" ${material==='pvc'?'selected':''}>НПВХ</option>
-            </select> &nbsp;
-            ${ironBrands}${pvcBrands}
+            Система ливневая К2
         </td>
     </tr>`;
 
     let grandTotal = 0;
-    body.innerHTML += rows.map((row, i) => {
-        const isRab = row.type === 'раб';
-        const hasDn = !!(row.dns || row.dnPairs);
-        const isPair = !!row.dnPairs;
-        const defVal = isPair ? row.defaultPair : row.defaultDn;
-        const mainKey = 'k2_' + material + '_main_' + i;
-        const mainDn = hasDn ? (selectedDns[mainKey] ?? defVal) : null;
 
-        let dnCell = '<td></td>';
-        if (hasDn && !isRab) {
-            const opts = isPair ? row.dnPairs : row.dns;
-            dnCell = `<td><select class="dn-select${isPair?' dn-select-pair':''}" onchange="onDnMain('k2_${material}',${i},this.value)">` +
-                opts.map(o => {
-                    const label = isPair ? o.replace('_','×') : o;
-                    return `<option value="${o}"${o==mainDn?' selected':''}>${label}</option>`;
-                }).join('') + `</select></td>`;
-        }
+    for (const [material, grpBlds] of Object.entries(groups)) {
+        if (grpBlds.length === 0) continue;
 
-        let totalQty = 0;
-        let totalCost = 0;
+        const rows = material === 'cast_iron' ? MAT_K2_CAST_IRON : MAT_K2_PVC;
+        const bldNames = grpBlds.map(b => 'К' + b.name).join(', ');
 
-        const cells = buildings.map(b => {
-            const qty = row.calc(b.id);
-            totalQty += qty;
-
-            const bldKey = 'k2_' + material + '_' + i + '_' + b.id;
-            const curDn = hasDn ? (selectedDns[bldKey] ?? mainDn) : null;
-            const expanded = hasDn && !!dnBldExpanded[b.id];
-
-            let priceId = row.priceId || '';
-            if (hasDn && row.priceKey) priceId = row.priceKey(curDn);
-
-            let price = getPrice(priceId, selectedBrand);
-            if (row.pricePer && price) price = +(price / row.pricePer).toFixed(2);
-            totalCost += price * qty;
-
-            let dnHtml = '';
-            if (expanded && hasDn) {
-                const opts = isPair ? row.dnPairs : row.dns;
-                dnHtml = `<select class="dn-mini${isPair?' dn-mini-pair':''}" onchange="onDnChange('${bldKey}',this.value)">` +
-                    opts.map(o => {
-                        const label = isPair ? o.replace('_','×') : o;
-                        return `<option value="${o}"${o==curDn?' selected':''}>${label}</option>`;
-                    }).join('') + `</select>`;
-            }
-
-            return expanded && hasDn
-                ? `<td><div style="display:inline-flex;align-items:baseline;gap:2px">${dnHtml} <span>${fmt(qty)}</span></div></td>`
-                : `<td>${fmt(qty)}</td>`;
-        }).join('');
-
-        totalCost = +totalCost.toFixed(2);
-        grandTotal += totalCost;
-
-        let basePrice = 0;
-        {
-            let pid = row.priceId || '';
-            if (hasDn && row.priceKey) pid = row.priceKey(mainDn);
-            basePrice = getPrice(pid, selectedBrand);
-            if (row.pricePer && basePrice) basePrice = +(basePrice / row.pricePer).toFixed(2);
-        }
-
-        const brandLabel = row.brand ? selectedBrand : '';
-        const nameText = brandLabel
-            ? `${row.name} <span style="color:#6b7280;font-size:0.68rem">${brandLabel}</span>`
-            : row.name;
-
-        return `<tr class="${isRab ? 'row-rab' : 'row-mat'}">
-            <td class="type-cell">${row.type}</td>
-            <td style="text-align:left;white-space:normal;max-width:200px">${nameText}</td>
-            <td class="unit-cell">${row.unit}</td>
-            ${hasDn ? dnCell : '<td></td>'}
-            <td style="color:#94a3b8;font-size:0.75rem">${basePrice ? basePrice.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
-            ${cells}
-            <td class="total-cell">${fmt(totalQty)}</td>
-            <td style="color:#10b981;font-weight:600">${totalCost ? totalCost.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+        // Подзаголовок материала
+        body.innerHTML += `<tr style="background:#1a1d2e">
+            <td colspan="${7 + buildings.length}" style="padding:4px 6px;font-size:0.75rem;color:#94a3b8">
+                К2 — ${matLabels[material]} <span style="color:#6b7280;font-size:0.7rem">(${bldNames})</span>
+            </td>
         </tr>`;
-    }).join('');
+
+        const result = renderMatGroup({
+            system: 'k2', material, rows,
+            dnPrefix: 'k2_' + material,
+            groupBuildings: grpBlds,
+        });
+        body.innerHTML += result.html;
+        grandTotal += result.total;
+    }
 
     // Подитого К2
     body.innerHTML += `<tr style="border-top:2px solid #3b82f6">
@@ -1419,13 +1425,12 @@ function onK4VariantChange() {
     recalculate();
 }
 
-function onMaterialChangeK4() {
-    window._k4Material = document.getElementById('material-k4').value;
-    recalculate();
-}
-
 function renderCalcK4() {
     const body = document.getElementById('calc-k1-body');
+    const variant = window._k4Variant || 'v1';
+    const k4enabled = window._k4Enabled !== false;
+
+    const selStyle = 'padding:3px 6px;background:#0f1117;border:1px solid #334155;border-radius:4px;color:#e0e0e0;font-size:0.72rem;font-family:inherit;';
 
     // Общий заголовок секции К4
     body.innerHTML += `<tr class="section-row">
@@ -1434,47 +1439,7 @@ function renderCalcK4() {
         </td>
     </tr>`;
 
-    const variant = window._k4Variant || 'v1';
-    const material = window._k4Material || 'cast_iron';
-
-    let rows;
-    if (variant === 'v1') {
-        rows = MAT_K4_V1;
-    } else {
-        rows = material === 'cast_iron' ? MAT_K4_V2_CAST_IRON : MAT_K4_V2_PVC;
-    }
-
-    const brandIronEl = document.getElementById('brand-iron-k4');
-    const brandPvcEl = document.getElementById('brand-pvc-k4');
-    const selectedBrand = material === 'cast_iron'
-        ? (brandIronEl ? brandIronEl.value : 'Smart')
-        : (brandPvcEl ? brandPvcEl.value : 'Ostendorf');
-
-    const selStyle = 'padding:3px 6px;background:#0f1117;border:1px solid #334155;border-radius:4px;color:#e0e0e0;font-size:0.72rem;font-family:inherit;';
-
-    // Селекторы материала (только для варианта 2)
-    let materialHtml = '';
-    if (variant === 'v2') {
-        const ironBrands = `<select id="brand-iron-k4" onchange="recalculate()" style="${selStyle}${material !== 'cast_iron' ? 'display:none' : ''}">
-            <option value="AVF">AVF</option><option value="Smart" ${selectedBrand==='Smart'?'selected':''}>Smart</option>
-            <option value="Con-Pipe">Con-Pipe</option><option value="Pam-Global">Pam-Global</option><option value="Halifax">Halifax</option>
-        </select>`;
-        const pvcBrands = `<select id="brand-pvc-k4" onchange="recalculate()" style="${selStyle}${material !== 'pvc' ? 'display:none' : ''}">
-            <option value="Контур-Уют">Контур-Уют</option><option value="РосТурПласт">РосТурПласт</option>
-            <option value="Ostendorf" ${selectedBrand==='Ostendorf'?'selected':''}>Ostendorf</option><option value="Pro Aqua">Pro Aqua</option>
-            <option value="Rehau">Rehau</option><option value="Синикон">Синикон</option>
-            <option value="Uponor">Uponor</option><option value="Valfex">Valfex</option>
-        </select>`;
-        materialHtml = `
-            <select id="material-k4" onchange="onMaterialChangeK4()" style="${selStyle}">
-                <option value="cast_iron" ${material==='cast_iron'?'selected':''}>Чугун (SML)</option>
-                <option value="pvc" ${material==='pvc'?'selected':''}>НПВХ</option>
-            </select> &nbsp;${ironBrands}${pvcBrands}`;
-    }
-
-    const k4enabled = window._k4Enabled !== false;
-
-    // Разделитель секции К4
+    // Чекбокс и вариант
     body.innerHTML += `<tr class="section-row">
         <td colspan="${7 + buildings.length}" style="padding:8px 6px">
             <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px" onclick="event.stopPropagation()">
@@ -1484,7 +1449,7 @@ function renderCalcK4() {
             <select id="k4-variant" onchange="onK4VariantChange()" style="${selStyle}">
                 <option value="v1" ${variant==='v1'?'selected':''}>В составе К1</option>
                 <option value="v2" ${variant==='v2'?'selected':''}>Отдельная система</option>
-            </select> &nbsp;${materialHtml}
+            </select>
         </td>
     </tr>`;
 
@@ -1494,84 +1459,42 @@ function renderCalcK4() {
     }
 
     let grandTotal = 0;
-    body.innerHTML += rows.map((row, i) => {
-        const isRab = row.type === 'раб';
-        const hasDn = !!(row.dns || row.dnPairs);
-        const isPair = !!row.dnPairs;
-        const defVal = isPair ? row.defaultPair : row.defaultDn;
-        const mainKey = 'k4_' + variant + '_' + material + '_main_' + i;
-        const mainDn = hasDn ? (selectedDns[mainKey] ?? defVal) : null;
 
-        let dnCell = '<td></td>';
-        if (hasDn && !isRab) {
-            const opts = isPair ? row.dnPairs : row.dns;
-            dnCell = `<td><select class="dn-select${isPair?' dn-select-pair':''}" onchange="onDnMain('k4_${variant}_${material}',${i},this.value)">` +
-                opts.map(o => {
-                    const label = isPair ? o.replace('_','×') : o;
-                    return `<option value="${o}"${o==mainDn?' selected':''}>${label}</option>`;
-                }).join('') + `</select></td>`;
+    if (variant === 'v1') {
+        // Вариант 1: одинаковые строки для всех, материал не играет роли
+        const result = renderMatGroup({
+            system: 'k4', material: 'cast_iron', rows: MAT_K4_V1,
+            dnPrefix: 'k4_v1',
+            groupBuildings: buildings,
+        });
+        body.innerHTML += result.html;
+        grandTotal = result.total;
+    } else {
+        // Вариант 2: группировка по материалу К4
+        const groups = groupByMaterial('k4');
+        const matLabels = { cast_iron: 'Чугун (SML)', pvc: 'НПВХ' };
+
+        for (const [material, grpBlds] of Object.entries(groups)) {
+            if (grpBlds.length === 0) continue;
+
+            const rows = material === 'cast_iron' ? MAT_K4_V2_CAST_IRON : MAT_K4_V2_PVC;
+            const bldNames = grpBlds.map(b => 'К' + b.name).join(', ');
+
+            body.innerHTML += `<tr style="background:#1a1d2e">
+                <td colspan="${7 + buildings.length}" style="padding:4px 6px;font-size:0.75rem;color:#94a3b8">
+                    К4 — ${matLabels[material]} <span style="color:#6b7280;font-size:0.7rem">(${bldNames})</span>
+                </td>
+            </tr>`;
+
+            const result = renderMatGroup({
+                system: 'k4', material, rows,
+                dnPrefix: 'k4_v2_' + material,
+                groupBuildings: grpBlds,
+            });
+            body.innerHTML += result.html;
+            grandTotal += result.total;
         }
-
-        let totalQty = 0;
-        let totalCost = 0;
-
-        const cells = buildings.map(b => {
-            const qty = row.calc(b.id);
-            totalQty += qty;
-
-            const bldKey = 'k4_' + variant + '_' + material + '_' + i + '_' + b.id;
-            const curDn = hasDn ? (selectedDns[bldKey] ?? mainDn) : null;
-            const expanded = hasDn && !!dnBldExpanded[b.id];
-
-            let priceId = row.priceId || '';
-            if (hasDn && row.priceKey) priceId = row.priceKey(curDn);
-
-            let price = getPrice(priceId, selectedBrand);
-            if (row.pricePer && price) price = +(price / row.pricePer).toFixed(2);
-            totalCost += price * qty;
-
-            let dnHtml = '';
-            if (expanded && hasDn) {
-                const opts = isPair ? row.dnPairs : row.dns;
-                dnHtml = `<select class="dn-mini${isPair?' dn-mini-pair':''}" onchange="onDnChange('${bldKey}',this.value)">` +
-                    opts.map(o => {
-                        const label = isPair ? o.replace('_','×') : o;
-                        return `<option value="${o}"${o==curDn?' selected':''}>${label}</option>`;
-                    }).join('') + `</select>`;
-            }
-
-            return expanded && hasDn
-                ? `<td><div style="display:inline-flex;align-items:baseline;gap:2px">${dnHtml} <span>${fmt(qty)}</span></div></td>`
-                : `<td>${fmt(qty)}</td>`;
-        }).join('');
-
-        totalCost = +totalCost.toFixed(2);
-        grandTotal += totalCost;
-
-        let basePrice = 0;
-        {
-            let pid = row.priceId || '';
-            if (hasDn && row.priceKey) pid = row.priceKey(mainDn);
-            basePrice = getPrice(pid, selectedBrand);
-            if (row.pricePer && basePrice) basePrice = +(basePrice / row.pricePer).toFixed(2);
-        }
-
-        const brandLabel = row.brand ? selectedBrand : '';
-        const nameText = brandLabel
-            ? `${row.name} <span style="color:#6b7280;font-size:0.68rem">${brandLabel}</span>`
-            : row.name;
-
-        return `<tr class="${isRab ? 'row-rab' : 'row-mat'}">
-            <td class="type-cell">${row.type}</td>
-            <td style="text-align:left;white-space:normal;max-width:200px">${nameText}</td>
-            <td class="unit-cell">${row.unit}</td>
-            ${hasDn ? dnCell : '<td></td>'}
-            <td style="color:#94a3b8;font-size:0.75rem">${basePrice ? basePrice.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
-            ${cells}
-            <td class="total-cell">${fmt(totalQty)}</td>
-            <td style="color:#10b981;font-weight:600">${totalCost ? totalCost.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
-        </tr>`;
-    }).join('');
+    }
 
     window._k4Total = grandTotal;
 }
@@ -1598,7 +1521,7 @@ function renderDrainSection(label, rows, enabledKey, qtyKey, sectionId) {
 
     if (!enabled || !qty) return 0;
 
-    const selectedBrand = document.getElementById('brand-iron').value || 'Smart';
+    const selectedBrand = buildings.length > 0 ? getBldBrand('k1', buildings[0].id) : 'Smart';
 
     let grandTotal = 0;
     body.innerHTML += rows.map((row, i) => {
