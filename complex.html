@@ -665,6 +665,16 @@ function getBldDn(sys, bId) {
     return (buildingDns[sys] && buildingDns[sys][bId]) || 100;
 }
 
+function onGlobalMaterialChange(bId, value) {
+    ['k1', 'k2', 'k4'].forEach(sys => {
+        if (!buildingMaterials[sys]) buildingMaterials[sys] = {};
+        buildingMaterials[sys][bId] = value;
+        if (buildingBrands[sys]) delete buildingBrands[sys][bId];
+    });
+    saveData();
+    render();
+}
+
 function onBldMaterialChange(sys, bId, value) {
     if (!buildingMaterials[sys]) buildingMaterials[sys] = {};
     buildingMaterials[sys][bId] = value;
@@ -1038,6 +1048,21 @@ function renderInputTable() {
 
     // Стиль для селекторов настроек
     const cfgSel = 'width:100%;padding:4px 6px;background:#0f1117;border:1px solid #334155;border-radius:4px;color:#e0e0e0;font-size:0.75rem;font-family:inherit';
+
+    // === Общий выбор материала для корпуса (вверху таблицы) ===
+    let matRowHtml = `<tr style="background:rgba(59,130,246,0.12);border-top:2px solid #3b82f6">
+        <td style="font-weight:700;color:#3b82f6;font-size:0.82rem">Материал (общий)</td>
+        <td class="unit-cell">—</td>
+        ${buildings.map(b => {
+            const cur = getBldMaterial('k1', b.id);
+            return `<td><select onchange="onGlobalMaterialChange(${b.id},this.value)" style="${cfgSel};font-weight:600">
+                <option value="cast_iron" ${cur==='cast_iron'?'selected':''}>Чугун</option>
+                <option value="pvc" ${cur==='pvc'?'selected':''}>ПВХ</option>
+            </select></td>`;
+        }).join('')}
+        <td class="total-cell">—</td>
+    </tr>`;
+    body.innerHTML = matRowHtml + body.innerHTML;
 
     // Генерация блока настроек (материал + бренд + ДН) для одной системы
     function renderConfigRows(sys, label) {
